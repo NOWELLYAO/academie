@@ -6,7 +6,10 @@ const ETAPES: { niveaux: Niveau[]; label: string }[] = [
   { niveaux: ["2ndeC", "2ndeA"], label: "Seconde" },
   { niveaux: ["1ereC", "1ereD", "1ereA"], label: "Première" },
   { niveaux: ["TermC", "TermD", "TermA"], label: "Terminale" },
-  { niveaux: ["Universite", "EcoleIngenieurs"], label: "Université / École" },
+  {
+    niveaux: ["PrepaScientifique", "PrepaLitteraire", "DUT", "Universite", "EcoleIngenieurs"],
+    label: "Post-bac",
+  },
 ];
 
 export default function ParcoursCarte({ eleve }: { eleve: Eleve }) {

@@ -2,19 +2,11 @@
 
 import { use } from "react";
 import Link from "next/link";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-} from "recharts";
 import { useAcademyStore } from "@/lib/store/useAcademyStore";
 import PageHeader from "@/components/PageHeader";
 import CompetenceBars from "@/components/CompetenceBars";
 import ParcoursCarte from "@/components/ParcoursCarte";
+import EvolutionCharts from "@/components/EvolutionCharts";
 import { NOM_NIVEAU } from "@/lib/data/subjects";
 import { qualifierPotentiel, qualifierVolatilite } from "@/lib/engines/potential";
 import { genererAppreciation } from "@/lib/engines/narrative";
@@ -43,11 +35,6 @@ export default function ElevePage({
   const derniere = eleve.moyennes[eleve.moyennes.length - 1];
   const nomClasse = session.classes.find((c) => c.id === eleve.classeId)?.nom ?? eleve.classeId;
   const appreciation = genererAppreciation(eleve);
-  const dataGraphique = eleve.moyennes.map((m, i) => ({
-    label: `T${m.trimestre} ${m.annee.split("-")[0]}`,
-    moyenne: m.moyenneGenerale,
-    index: i,
-  }));
 
   return (
     <div className="p-10 max-w-5xl">
@@ -98,7 +85,7 @@ export default function ElevePage({
         </span>
         {eleve.admissiblePolytechnique && (
           <span className="text-xs border border-forest text-forest px-2.5 py-1 bg-forest-soft/50">
-            Admissible Polytechnique
+            Admission d&apos;excellence
           </span>
         )}
       </div>
@@ -114,30 +101,8 @@ export default function ElevePage({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         <div>
-          <h2 className="font-display text-lg text-ink mb-3">Évolution des moyennes</h2>
-          {dataGraphique.length > 1 ? (
-            <div className="border border-line bg-white/60 p-4 h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={dataGraphique}>
-                  <CartesianGrid stroke="#DCD9CE" vertical={false} />
-                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#55607A" }} />
-                  <YAxis domain={[0, 20]} tick={{ fontSize: 11, fill: "#55607A" }} width={28} />
-                  <Tooltip />
-                  <Line
-                    type="monotone"
-                    dataKey="moyenne"
-                    stroke="#101B33"
-                    strokeWidth={2}
-                    dot={{ r: 3, fill: "#C9A227" }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <p className="text-sm text-slate">
-              Pas encore assez de données — avancez la timeline pour suivre l&apos;évolution.
-            </p>
-          )}
+          <h2 className="font-display text-lg text-ink mb-3">Évolution</h2>
+          <EvolutionCharts eleve={eleve} />
 
           <h2 className="font-display text-lg text-ink mt-8 mb-3">Compétences</h2>
           <div className="border border-line bg-white/60 p-5">

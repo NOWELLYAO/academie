@@ -15,7 +15,7 @@ const LIBELLE_ACTION: Record<string, string> = {
   T1: "Simuler le trimestre 1",
   T2: "Simuler le trimestre 2",
   T3: "Simuler le trimestre 3",
-  examen: "Organiser l'examen de fin d'année",
+  examen: "Clôturer l'année (BEPC / Bac pour 3e & Tle)",
   orientation: "Calculer l'orientation",
   annee_suivante: "Passer à l'année suivante",
 };

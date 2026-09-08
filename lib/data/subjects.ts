@@ -74,6 +74,9 @@ export const NOM_NIVEAU: Record<Niveau, string> = {
   TermC: "Terminale C",
   TermD: "Terminale D",
   TermA: "Terminale A",
+  PrepaScientifique: "Classe préparatoire scientifique",
+  PrepaLitteraire: "Classe préparatoire littéraire",
+  DUT: "DUT / BTS",
   Universite: "Université",
   EcoleIngenieurs: "École d'ingénieurs",
 };

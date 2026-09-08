@@ -109,34 +109,95 @@ export function niveauSuivant(niveau: Niveau): Niveau | null {
   return null; // Terminale -> fin (orientation universitaire)
 }
 
-/** Recommandation universitaire après l'examen final de Terminale. */
-export function recommanderFiliereUniversitaire(eleve: Eleve): {
-  filieres: FiliereUniversitaire[];
-  admissiblePolytechnique: boolean;
+/** Un élève ne passe un examen national (BEPC / Baccalauréat) qu'en 3e et
+ * en Terminale. Les autres niveaux (Seconde, Première) sont évalués sur
+ * la seule moyenne annuelle de contrôle continu. */
+export function estNiveauExamen(niveau: Niveau): boolean {
+  return niveau === "3e" || niveau === "TermA" || niveau === "TermC" || niveau === "TermD";
+}
+
+/** Orientation post-Terminale : classe préparatoire scientifique ou
+ * littéraire, DUT/BTS, université ou admission directe en école
+ * d'ingénieurs — jamais un choix binaire, toujours selon les compétences
+ * dominantes et le niveau atteint au baccalauréat. */
+export function orienterPostBac(eleve: Eleve): {
+  niveau: Niveau;
+  motif: string;
+  filieresConseillees: FiliereUniversitaire[];
+  excellence: boolean;
 } {
   const c = eleve.competences;
-  const filieres: FiliereUniversitaire[] = [];
+  const moyenne = moyenneEleve(eleve);
+  const estFiliereScientifique = eleve.niveau === "TermC" || eleve.niveau === "TermD";
 
-  const fortMathsPhysique = c.mathematiques >= 15 && c.physique >= 14;
-  const fortMathsInfo = c.mathematiques >= 14 && c.informatique >= 15;
-  const fortSVT = c.svt >= 15;
-  const fortLitteraire = c.francais >= 15 && c.anglais >= 13 && (c.philosophie ?? 0) >= 13;
+  if (estFiliereScientifique) {
+    const fortMathsPhysique = c.mathematiques >= 15 && c.physique >= 14;
+    const fortMathsInfo = c.mathematiques >= 14 && c.informatique >= 15;
+    const fortSVT = c.svt >= 15;
 
-  if (fortMathsPhysique) filieres.push(...FILIERES_MATHS_PHYSIQUE);
-  if (fortMathsInfo) filieres.push(...FILIERES_MATHS_INFO);
-  if (fortSVT) filieres.push(...FILIERES_SVT);
-  if (fortLitteraire) filieres.push(...FILIERES_LITTERAIRES);
-
-  if (filieres.length === 0) {
-    // Filière par défaut la plus proche du profil dominant
-    filieres.push(
-      c.mathematiques >= c.francais ? FILIERES_MATHS_INFO[0] : FILIERES_LITTERAIRES[0]
-    );
+    if (moyenne >= 16 && c.mathematiques >= 17 && c.physique >= 15 && eleve.niveau === "TermC") {
+      return {
+        niveau: "EcoleIngenieurs",
+        motif: "Excellence scientifique — admission directe en école d'ingénieurs post-bac.",
+        filieresConseillees: [...FILIERES_MATHS_PHYSIQUE, ...FILIERES_MATHS_INFO].slice(0, 4),
+        excellence: true,
+      };
+    }
+    if (moyenne >= 13.5 && (fortMathsPhysique || fortMathsInfo)) {
+      return {
+        niveau: "PrepaScientifique",
+        motif: "Bon niveau scientifique — classe préparatoire (CPGE) visant les concours d'écoles d'ingénieurs.",
+        filieresConseillees: [...FILIERES_MATHS_PHYSIQUE, ...FILIERES_MATHS_INFO].slice(0, 4),
+        excellence: false,
+      };
+    }
+    if (fortSVT && moyenne >= 13) {
+      return {
+        niveau: "Universite",
+        motif: "Profil SVT solide — parcours universitaire scientifique (biologie, médecine, agronomie).",
+        filieresConseillees: FILIERES_SVT,
+        excellence: false,
+      };
+    }
+    if (moyenne >= 10) {
+      return {
+        niveau: "DUT",
+        motif: "Niveau correct mais profil plus technique — DUT/BTS pour une insertion professionnelle rapide.",
+        filieresConseillees: [...FILIERES_MATHS_INFO, ...FILIERES_MATHS_PHYSIQUE].slice(0, 3),
+        excellence: false,
+      };
+    }
+    return {
+      niveau: "Universite",
+      motif: "Poursuite en université, filière scientifique généraliste.",
+      filieresConseillees: FILIERES_MATHS_INFO.slice(0, 2),
+      excellence: false,
+    };
   }
 
-  const moyenne = moyenneEleve(eleve);
-  const admissiblePolytechnique =
-    moyenne >= 15 && c.mathematiques >= 16 && c.physique >= 14 && (eleve.niveau === "TermC");
+  // TermA — profil littéraire
+  const fortLitteraire = c.francais >= 15 && c.anglais >= 13 && (c.philosophie ?? 0) >= 13;
 
-  return { filieres, admissiblePolytechnique };
+  if (moyenne >= 15 && fortLitteraire) {
+    return {
+      niveau: "PrepaLitteraire",
+      motif: "Excellent profil littéraire — classe préparatoire littéraire (objectif Sciences Po / ENS).",
+      filieresConseillees: FILIERES_LITTERAIRES,
+      excellence: true,
+    };
+  }
+  if (moyenne >= 10) {
+    return {
+      niveau: "Universite",
+      motif: "Poursuite en université, filière lettres/droit/communication selon affinités.",
+      filieresConseillees: FILIERES_LITTERAIRES,
+      excellence: false,
+    };
+  }
+  return {
+    niveau: "DUT",
+    motif: "Orientation vers un DUT/BTS pour un parcours plus court et professionnalisant.",
+    filieresConseillees: FILIERES_LITTERAIRES.slice(0, 2),
+    excellence: false,
+  };
 }

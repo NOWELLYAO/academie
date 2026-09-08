@@ -31,11 +31,21 @@ export default function HallOfFamePage() {
       <PageHeader eyebrow="🏆" title="Hall of Fame" description="Meilleurs élèves depuis la 3e, selon la moyenne cumulée sur tous les trimestres." />
 
       {bilan && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           <StatCard label="Diplômés" value={bilan.diplomes} accent="forest" />
-          <StatCard label="Écoles d'ingénieurs" value={bilan.ecolesIngenieurs} accent="gold" />
-          <StatCard label="Admis Polytechnique" value={bilan.admisPolytechnique} accent="gold" />
+          <StatCard label="Admission d'excellence" value={bilan.admisPolytechnique} accent="gold" />
           <StatCard label="Recalés" value={bilan.recales} accent="burgundy" />
+          <StatCard label="Redoublements" value={bilan.redoublements} />
+        </div>
+      )}
+
+      {bilan && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+          <StatCard label="École d'ingénieurs" value={bilan.ecolesIngenieurs} accent="gold" />
+          <StatCard label="Prépa scientifique" value={bilan.prepaScientifique} accent="forest" />
+          <StatCard label="Prépa littéraire" value={bilan.prepaLitteraire} accent="burgundy" />
+          <StatCard label="DUT / BTS" value={bilan.dut} />
+          <StatCard label="Université" value={bilan.universitaires} />
         </div>
       )}
 

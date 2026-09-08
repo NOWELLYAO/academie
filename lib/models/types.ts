@@ -19,6 +19,9 @@ export type Niveau =
   | "TermC"
   | "TermD"
   | "TermA"
+  | "PrepaScientifique"
+  | "PrepaLitteraire"
+  | "DUT"
   | "Universite"
   | "EcoleIngenieurs";
 
@@ -209,6 +212,9 @@ export interface BilanGeneration {
   redoublements: number;
   recales: number;
   diplomes: number;
+  prepaScientifique: number;
+  prepaLitteraire: number;
+  dut: number;
   universitaires: number;
   ecolesIngenieurs: number;
   admisPolytechnique: number;

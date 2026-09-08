@@ -27,6 +27,7 @@ export default function NotesSaisiePage({
   const session = useAcademyStore((s) => s.session);
   const creerEvaluationManuelle = useAcademyStore((s) => s.creerEvaluationManuelle);
   const enregistrerNote = useAcademyStore((s) => s.enregistrerNote);
+  const genererNotesAleatoiresEvaluation = useAcademyStore((s) => s.genererNotesAleatoiresEvaluation);
 
   const [type, setType] = useState<Note["type"]>("devoir");
   const [bareme, setBareme] = useState<10 | 20>(20);
@@ -134,6 +135,21 @@ export default function NotesSaisiePage({
       </div>
 
       {evaluationActive && (
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs text-slate">
+            {Object.keys(evaluationActive.saisies).length} / {eleves.length} notes saisies
+          </p>
+          <button
+            onClick={() => genererNotesAleatoiresEvaluation(evaluationActive.id)}
+            className="text-xs border border-ink text-ink px-3 py-1.5 hover:bg-paper-dim transition-colors"
+            title="Génère une note pour chaque élève, cohérente avec son niveau habituel dans la matière"
+          >
+            🎲 Générer aléatoirement les notes
+          </button>
+        </div>
+      )}
+
+      {evaluationActive && (
         <div className="border border-line bg-white/60 overflow-x-auto scrollbar-thin">
           <table className="ledger-table">
             <thead>
@@ -152,6 +168,7 @@ export default function NotesSaisiePage({
                   </td>
                   <td>
                     <input
+                      key={`${evaluationActive.id}-${e.matricule}-${evaluationActive.saisies[e.matricule] ?? "vide"}`}
                       type="number"
                       min={0}
                       max={evaluationActive.bareme}

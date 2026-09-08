@@ -42,6 +42,14 @@ export function genererNoteBrute(
   // Effet de la difficulté de l'évaluation
   note -= (difficulte - 1) * 1.5;
 
+  // Cohérence : un élève ne peut pas s'effondrer totalement d'une
+  // évaluation à l'autre. Le plancher dépend de son niveau réel dans la
+  // matière — un élève à 18-20 de moyenne ne descend jamais sous 12-14,
+  // même sur une mauvaise évaluation ; un élève déjà faible peut continuer
+  // à avoir des notes basses, mais jamais un écart absurde comme 0 ou 1.
+  const plancher = clamp(competenceActuelle - 6, 2, 14);
+  note = Math.max(note, plancher);
+
   return clamp(Math.round(note * 10) / 10, 0, 20);
 }
 

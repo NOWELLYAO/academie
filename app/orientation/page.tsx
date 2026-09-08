@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useAcademyStore } from "@/lib/store/useAcademyStore";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
-import { scoreOrientation, recommanderFiliereUniversitaire } from "@/lib/engines/orientation";
+import { scoreOrientation, orienterPostBac } from "@/lib/engines/orientation";
 import { NOM_NIVEAU } from "@/lib/data/subjects";
 
 export default function OrientationPage() {
@@ -66,7 +66,7 @@ export default function OrientationPage() {
           </h2>
           <div className="border border-line bg-white/60 divide-y divide-line">
             {enTerminale.slice(0, 15).map((e) => {
-              const { filieres, admissiblePolytechnique } = recommanderFiliereUniversitaire(e);
+              const { niveau: destination, filieresConseillees, excellence } = orienterPostBac(e);
               const score = scoreOrientation(e);
               return (
                 <div key={e.matricule} className="px-4 py-3 flex items-start justify-between gap-4 flex-wrap">
@@ -75,13 +75,13 @@ export default function OrientationPage() {
                       {e.matricule} — {e.nom} {e.prenom}
                     </Link>
                     <div className="text-xs text-slate mt-1">
-                      {filieres.slice(0, 3).map((f) => f.nom).join(" · ")}
+                      {NOM_NIVEAU[destination]} · {filieresConseillees.slice(0, 3).map((f) => f.nom).join(" · ")}
                     </div>
                   </div>
                   <div className="text-right text-xs text-slate">
                     <div>Sc. {score.scientifique} / Litt. {score.litteraire}</div>
-                    {admissiblePolytechnique && (
-                      <div className="text-forest font-medium mt-0.5">Admissible Polytechnique</div>
+                    {excellence && (
+                      <div className="text-forest font-medium mt-0.5">Admission d&apos;excellence</div>
                     )}
                   </div>
                 </div>

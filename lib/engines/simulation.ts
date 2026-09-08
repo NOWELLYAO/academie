@@ -11,10 +11,11 @@ import { calculerIndicateurProgression } from "./progression";
 import { classerClasse, classerGeneration } from "./ranking";
 import {
   decisionProgression,
+  estNiveauExamen,
   niveauSuivant,
   orienterApresSecondeC,
   orienterFinDe3e,
-  recommanderFiliereUniversitaire,
+  orienterPostBac,
 } from "./orientation";
 import { NOM_NIVEAU } from "../data/subjects";
 
@@ -108,25 +109,44 @@ export function simulerTrimestre(session: Session, trimestre: 1 | 2 | 3): void {
   session.anneeCourante.etapeCourante = trimestre === 3 ? "examen" : trimestre === 2 ? "T3" : "T2";
 }
 
-/** Organise l'examen de fin d'année (moyenne annuelle + épreuve finale). */
+/** Moyenne annuelle = moyenne simple des moyennes des 3 trimestres de
+ * l'année en cours (et non la seule moyenne du 3e trimestre). */
+function moyenneAnnuelleTrimestres(eleve: Eleve, annee: string): number {
+  const trimestres = eleve.moyennes.filter((m) => m.annee === annee);
+  if (trimestres.length === 0) return 0;
+  const total = trimestres.reduce((acc, m) => acc + m.moyenneGenerale, 0);
+  return Math.round((total / trimestres.length) * 100) / 100;
+}
+
+/** Organise la fin d'année : seules la 3e et la Terminale (A/C/D) sont des
+ * classes d'examen (BEPC / Baccalauréat), combinant la moyenne annuelle de
+ * contrôle continu et une épreuve finale. Les autres niveaux (Seconde,
+ * Première) ne passent aucun examen national : leur résultat de fin
+ * d'année est simplement la moyenne annuelle des 3 trimestres. */
 export function simulerExamen(session: Session): void {
   const rng = rngDeSession(session, `EXAMEN-${session.anneeCourante.libelle}`);
 
   Object.values(session.eleves).forEach((eleve) => {
     if (eleve.statut !== "actif" && eleve.statut !== "redoublant") return;
-    // Note d'examen influencée par la compétence moyenne + un facteur de stress aléatoire
-    const matieres = matieresDuNiveau(eleve.niveau);
-    const moyennesMatieres = matieres.map((m) => eleve.competences[m.key] ?? 10);
-    const moyenne = moyennesMatieres.reduce((a, b) => a + b, 0) / moyennesMatieres.length;
-    const stress = (rng() - 0.5) * 2 * (1 - eleve.potentiel.resilience) * 2;
-    const noteExamen = Math.max(0, Math.min(20, moyenne + stress));
+
+    const moyenneAnnuelle = moyenneAnnuelleTrimestres(eleve, session.anneeCourante.libelle);
+    let moyenneFinale = moyenneAnnuelle;
+
+    if (estNiveauExamen(eleve.niveau)) {
+      // Note d'examen influencée par la compétence moyenne + un facteur de stress aléatoire
+      const matieres = matieresDuNiveau(eleve.niveau);
+      const moyennesMatieres = matieres.map((m) => eleve.competences[m.key] ?? 10);
+      const moyenneCompetences = moyennesMatieres.reduce((a, b) => a + b, 0) / moyennesMatieres.length;
+      const stress = (rng() - 0.5) * 2 * (1 - eleve.potentiel.resilience) * 2;
+      const noteExamen = Math.max(0, Math.min(20, moyenneCompetences + stress));
+
+      // Pondération classique : 60% contrôle continu annuel, 40% épreuve finale
+      moyenneFinale = Math.round((moyenneAnnuelle * 0.6 + noteExamen * 0.4) * 100) / 100;
+    }
 
     eleve.competences.progression = calculerIndicateurProgression(eleve);
-    // On stocke le résultat d'examen comme dernière moyenne "consolidée"
     const derniere = eleve.moyennes[eleve.moyennes.length - 1];
-    if (derniere) {
-      derniere.moyenneGenerale = Math.round(((derniere.moyenneGenerale * 3 + noteExamen) / 4) * 100) / 100;
-    }
+    if (derniere) derniere.moyenneGenerale = moyenneFinale;
   });
 
   session.anneeCourante.etapeCourante = "orientation";
@@ -194,18 +214,17 @@ export function simulerOrientation(session: Session): void {
       eleve.niveau = suivant;
       eleve.statut = "actif";
     } else {
-      // Fin de Terminale -> orientation universitaire
-      const { admissiblePolytechnique } = recommanderFiliereUniversitaire(eleve);
-      eleve.admissiblePolytechnique = admissiblePolytechnique;
+      // Fin de Terminale -> orientation post-bac (prépa, DUT, université, école d'ingénieurs)
+      const niveauOrigine = eleve.niveau;
+      const { niveau: destination, motif, excellence } = orienterPostBac(eleve);
+      eleve.admissiblePolytechnique = excellence;
       eleve.statut = "universite";
-      eleve.niveau = admissiblePolytechnique ? "EcoleIngenieurs" : "Universite";
+      eleve.niveau = destination;
       eleve.historiqueOrientation.push({
         annee: session.anneeCourante.libelle,
-        niveauOrigine: "TermC",
-        niveauDestination: eleve.niveau,
-        motif: admissiblePolytechnique
-          ? "Profil scientifique exceptionnel — admissible Polytechnique."
-          : "Orientation universitaire selon compétences dominantes.",
+        niveauOrigine,
+        niveauDestination: destination,
+        motif,
         scoreDetail: {},
       });
     }

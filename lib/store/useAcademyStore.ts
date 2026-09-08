@@ -5,8 +5,13 @@ import { persist } from "zustand/middleware";
 import { EvaluationDef, Session, SubjectKey } from "../models/types";
 import { genererSession } from "../engines/generation";
 import { etapeSuivante } from "../engines/simulation";
-import { calculerMoyenneTrimestre, creerEvaluation, saisirNote } from "../engines/grading";
-import { newSeed } from "../utils/random";
+import {
+  calculerMoyenneTrimestre,
+  creerEvaluation,
+  genererNotesAutomatiques,
+  saisirNote,
+} from "../engines/grading";
+import { mulberry32, newSeed } from "../utils/random";
 
 interface AcademyState {
   session: Session | null;
@@ -22,7 +27,30 @@ interface AcademyState {
     coefficient: number
   ) => string;
   enregistrerNote: (evaluationId: string, matricule: string, valeur: number) => void;
+  genererNotesAleatoiresEvaluation: (evaluationId: string) => void;
   toggleFavori: (matricule: string) => void;
+}
+
+/** Recalcule et met à jour l'entrée de moyenne trimestrielle d'un élève
+ * après une (ou plusieurs) saisie(s) de note, en la créant si besoin. */
+function recalculerMoyenneEleve(eleve: Session["eleves"][string], trimestre: 1 | 2 | 3, annee: string) {
+  const { parMatiere, moyenneGenerale } = calculerMoyenneTrimestre(eleve, trimestre, annee);
+  let entree = eleve.moyennes.find((m) => m.trimestre === trimestre && m.annee === annee);
+  if (!entree) {
+    entree = {
+      trimestre: trimestre as 1 | 2 | 3,
+      annee,
+      niveau: eleve.niveau,
+      parMatiere: [],
+      moyenneGenerale: 0,
+      rangClasse: 0,
+      rangEtablissement: 0,
+      rangGeneration: 0,
+    };
+    eleve.moyennes.push(entree);
+  }
+  entree.parMatiere = parMatiere;
+  entree.moyenneGenerale = moyenneGenerale;
 }
 
 function calculerBilan(session: Session) {
@@ -33,6 +61,9 @@ function calculerBilan(session: Session) {
     redoublements: eleves.filter((e) => e.redoublements > 0).length,
     recales: eleves.filter((e) => e.statut === "recale").length,
     diplomes: eleves.filter((e) => e.statut === "universite").length,
+    prepaScientifique: eleves.filter((e) => e.niveau === "PrepaScientifique").length,
+    prepaLitteraire: eleves.filter((e) => e.niveau === "PrepaLitteraire").length,
+    dut: eleves.filter((e) => e.niveau === "DUT").length,
     universitaires: eleves.filter((e) => e.niveau === "Universite").length,
     ecolesIngenieurs: eleves.filter((e) => e.niveau === "EcoleIngenieurs").length,
     admisPolytechnique: eleves.filter((e) => e.admissiblePolytechnique).length,
@@ -95,34 +126,28 @@ export const useAcademyStore = create<AcademyState>()(
         if (!evaluation) return;
         saisirNote(clone, evaluation, matricule, valeur);
 
-        // Recalcule la moyenne du trimestre en cours pour l'élève concerné
         const eleve = clone.eleves[matricule];
-        if (eleve) {
-          const { parMatiere, moyenneGenerale } = calculerMoyenneTrimestre(
-            eleve,
-            evaluation.trimestre,
-            evaluation.annee
-          );
-          let entree = eleve.moyennes.find(
-            (m: { trimestre: number; annee: string }) =>
-              m.trimestre === evaluation.trimestre && m.annee === evaluation.annee
-          );
-          if (!entree) {
-            entree = {
-              trimestre: evaluation.trimestre,
-              annee: evaluation.annee,
-              niveau: eleve.niveau,
-              parMatiere: [],
-              moyenneGenerale: 0,
-              rangClasse: 0,
-              rangEtablissement: 0,
-              rangGeneration: 0,
-            };
-            eleve.moyennes.push(entree);
-          }
-          entree.parMatiere = parMatiere;
-          entree.moyenneGenerale = moyenneGenerale;
-        }
+        if (eleve) recalculerMoyenneEleve(eleve, evaluation.trimestre, evaluation.annee);
+
+        set({ session: clone });
+      },
+
+      genererNotesAleatoiresEvaluation: (evaluationId: string) => {
+        const { session } = get();
+        if (!session) return;
+        const clone: Session = JSON.parse(JSON.stringify(session));
+        const evaluation = clone.evaluations.find((e) => e.id === evaluationId);
+        if (!evaluation) return;
+        const classe = clone.classes.find((c) => c.id === evaluation.classeId);
+        if (!classe) return;
+
+        const rng = mulberry32(Math.floor(Math.random() * 2 ** 31));
+        genererNotesAutomatiques(rng, clone, evaluation, classe);
+
+        classe.matricules.forEach((matricule) => {
+          const eleve = clone.eleves[matricule];
+          if (eleve) recalculerMoyenneEleve(eleve, evaluation.trimestre, evaluation.annee);
+        });
 
         set({ session: clone });
       },

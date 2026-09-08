@@ -103,7 +103,7 @@ export default function DashboardPage() {
           sub={meilleureClasse ? `Moy. ${meilleureClasse.moyenne.toFixed(2)}` : ""}
         />
         <StatCard label="Recalés" value={recales} accent="burgundy" />
-        <StatCard label="Université / Écoles" value={universite} accent="forest" />
+        <StatCard label="Post-bac" value={universite} accent="forest" sub="Université, prépa, DUT, écoles" />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
