@@ -57,7 +57,7 @@ export default function HallOfFamePage() {
               <div className="text-sm font-medium text-ink">
                 {e.matricule} — {e.nom} {e.prenom}
               </div>
-              <div className="text-xs text-slate">{e.classeId}</div>
+              <div className="text-xs text-slate">{e.classeNom}</div>
             </div>
             <div className="text-right">
               <div className="font-display text-lg text-ink">{e.moyenneCumulee.toFixed(2)}</div>

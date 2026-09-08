@@ -38,6 +38,7 @@ export default function ElevePage({
   }
 
   const derniere = eleve.moyennes[eleve.moyennes.length - 1];
+  const nomClasse = session.classes.find((c) => c.id === eleve.classeId)?.nom ?? eleve.classeId;
   const dataGraphique = eleve.moyennes.map((m, i) => ({
     label: `T${m.trimestre} ${m.annee.split("-")[0]}`,
     moyenne: m.moyenneGenerale,
@@ -52,7 +53,7 @@ export default function ElevePage({
 
       <div className="flex items-start justify-between flex-wrap gap-4 mb-2">
         <PageHeader
-          eyebrow={`${eleve.matricule} · ${eleve.classeId}`}
+          eyebrow={`${eleve.matricule} · ${nomClasse}`}
           title={`${eleve.nom} ${eleve.prenom}`}
           description={NOM_NIVEAU[eleve.niveau]}
         />

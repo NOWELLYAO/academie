@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Eleve } from "@/lib/models/types";
+import { NOM_NIVEAU } from "@/lib/data/subjects";
 
 function couleurMoyenne(m: number): string {
   if (m >= 16) return "text-forest font-semibold";
@@ -46,7 +47,7 @@ export default function StudentTable({ eleves }: { eleves: Eleve[] }) {
                     {e.nom} {e.prenom}
                   </Link>
                 </td>
-                <td className="text-slate">{e.niveau}</td>
+                <td className="text-slate">{NOM_NIVEAU[e.niveau]}</td>
                 <td className={couleurMoyenne(derniere?.moyenneGenerale ?? 0)}>
                   {derniere ? derniere.moyenneGenerale.toFixed(2) : "—"}
                 </td>

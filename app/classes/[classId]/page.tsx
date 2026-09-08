@@ -7,6 +7,7 @@ import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import StudentTable from "@/components/StudentTable";
 import EventFeed from "@/components/EventFeed";
+import { NOM_NIVEAU } from "@/lib/data/subjects";
 
 export default function ClasseDetailPage({
   params,
@@ -42,7 +43,7 @@ export default function ClasseDetailPage({
       <Link href="/classes" className="text-xs text-slate hover:text-ink mb-4 inline-block">
         ← Toutes les classes
       </Link>
-      <PageHeader eyebrow={classe.niveau} title={classe.nom} description={`${eleves.length} élèves`} />
+      <PageHeader eyebrow={NOM_NIVEAU[classe.niveau]} title={classe.nom} description={`${eleves.length} élèves`} />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <StatCard label="Moyenne de classe" value={moyenne.toFixed(2)} accent="gold" />

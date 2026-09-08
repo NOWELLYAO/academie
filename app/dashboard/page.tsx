@@ -6,6 +6,7 @@ import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import TimelineControl from "@/components/TimelineControl";
 import EventFeed from "@/components/EventFeed";
+import { NOM_NIVEAU } from "@/lib/data/subjects";
 
 export default function DashboardPage() {
   const session = useAcademyStore((s) => s.session);
@@ -104,7 +105,7 @@ export default function DashboardPage() {
               }, {})
             ).map(([niveau, count]) => (
               <div key={niveau} className="px-4 py-2.5 flex justify-between text-sm">
-                <span className="text-slate">{niveau}</span>
+                <span className="text-slate">{NOM_NIVEAU[niveau as keyof typeof NOM_NIVEAU] ?? niveau}</span>
                 <span className="font-medium tabular-nums">{count}</span>
               </div>
             ))}
