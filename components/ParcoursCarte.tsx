@@ -14,42 +14,60 @@ const ETAPES: { niveaux: Niveau[]; label: string }[] = [
 
 export default function ParcoursCarte({ eleve }: { eleve: Eleve }) {
   const etapeActuelleIdx = ETAPES.findIndex((e) => e.niveaux.includes(eleve.niveau));
+  const diplome = eleve.statut === "diplome";
+
+  function libelleEtapeActuelle(): string {
+    if (diplome) return `🎓 Diplômé — ${NOM_NIVEAU[eleve.niveau]}`;
+    if (eleve.anneePostBac && eleve.anneePostBac > 0) {
+      return `${NOM_NIVEAU[eleve.niveau]} (${eleve.anneePostBac}e année)`;
+    }
+    return NOM_NIVEAU[eleve.niveau];
+  }
 
   return (
-    <div className="flex items-center w-full">
-      {ETAPES.map((etape, i) => {
-        const atteinte = i <= etapeActuelleIdx;
-        const actuelle = i === etapeActuelleIdx;
-        return (
-          <div key={etape.label} className="flex items-center flex-1 last:flex-none">
-            <div className="flex flex-col items-center gap-1.5">
-              <div
-                className={`h-3.5 w-3.5 rounded-full border-2 ${
-                  actuelle
-                    ? "bg-gold border-gold"
-                    : atteinte
-                    ? "bg-forest border-forest"
-                    : "bg-white border-line"
-                }`}
-              />
-              <span
-                className={`text-[11px] whitespace-nowrap ${
-                  actuelle ? "text-ink font-semibold" : "text-slate"
-                }`}
-              >
-                {actuelle ? NOM_NIVEAU[eleve.niveau] : etape.label}
-              </span>
+    <div>
+      <div className="flex items-center w-full">
+        {ETAPES.map((etape, i) => {
+          const atteinte = i <= etapeActuelleIdx;
+          const actuelle = i === etapeActuelleIdx;
+          return (
+            <div key={etape.label} className="flex items-center flex-1 last:flex-none">
+              <div className="flex flex-col items-center gap-1.5">
+                <div
+                  className={`h-3.5 w-3.5 rounded-full border-2 ${
+                    actuelle
+                      ? diplome
+                        ? "bg-forest border-forest"
+                        : "bg-gold border-gold"
+                      : atteinte
+                      ? "bg-forest border-forest"
+                      : "bg-white border-line"
+                  }`}
+                />
+                <span
+                  className={`text-[11px] whitespace-nowrap ${
+                    actuelle ? "text-ink font-semibold" : "text-slate"
+                  }`}
+                >
+                  {actuelle ? libelleEtapeActuelle() : etape.label}
+                </span>
+              </div>
+              {i < ETAPES.length - 1 && (
+                <div
+                  className={`h-px flex-1 mx-1 mb-4 ${
+                    i < etapeActuelleIdx ? "bg-forest" : "bg-line"
+                  }`}
+                />
+              )}
             </div>
-            {i < ETAPES.length - 1 && (
-              <div
-                className={`h-px flex-1 mx-1 mb-4 ${
-                  i < etapeActuelleIdx ? "bg-forest" : "bg-line"
-                }`}
-              />
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
+      {eleve.redoublements > 0 && (
+        <p className="text-[11px] text-burgundy mt-2">
+          🔁 A redoublé {eleve.redoublements} fois ({eleve.anneesRedoublees.join(", ")})
+        </p>
+      )}
     </div>
   );
 }

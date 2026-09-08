@@ -10,6 +10,8 @@ import EvolutionCharts from "@/components/EvolutionCharts";
 import { NOM_NIVEAU } from "@/lib/data/subjects";
 import { qualifierPotentiel, qualifierVolatilite } from "@/lib/engines/potential";
 import { genererAppreciation } from "@/lib/engines/narrative";
+import { calculerBadges } from "@/lib/engines/badges";
+import { formaterFCFA } from "@/lib/engines/finances";
 import { exporterBulletinIndividuel } from "@/lib/export/pdf";
 import FavoriteStar from "@/components/FavoriteStar";
 import Avatar from "@/components/Avatar";
@@ -36,6 +38,7 @@ export default function ElevePage({
   const derniere = eleve.moyennes[eleve.moyennes.length - 1];
   const nomClasse = session.classes.find((c) => c.id === eleve.classeId)?.nom ?? eleve.classeId;
   const appreciation = genererAppreciation(eleve);
+  const badges = calculerBadges(eleve);
 
   return (
     <div className="p-10 max-w-5xl">
@@ -54,7 +57,7 @@ export default function ElevePage({
                 <FavoriteStar matricule={eleve.matricule} size="text-2xl" />
               </span>
             }
-            description={`${NOM_NIVEAU[eleve.niveau]} · Origine ${eleve.pays}`}
+            description={`${eleve.statut === "diplome" ? "🎓 Diplômé" : eleve.anneePostBac ? `${NOM_NIVEAU[eleve.niveau]} (${eleve.anneePostBac}e année)` : NOM_NIVEAU[eleve.niveau]} · Origine ${eleve.pays}`}
           />
         </div>
         <div className="text-right">
@@ -67,6 +70,10 @@ export default function ElevePage({
               Rang {derniere.rangClasse} classe · {derniere.rangGeneration} génération
             </div>
           )}
+          <div className="mt-2 text-sm text-ink font-medium">
+            💰 {formaterFCFA(eleve.solde ?? 0)}
+            {eleve.boursier && <span className="ml-1.5 text-xs text-gold">🎓 Boursier</span>}
+          </div>
           <button
             onClick={() => exporterBulletinIndividuel(eleve, nomClasse, session.nomSession, appreciation)}
             className="mt-3 text-xs border border-ink text-ink px-3 py-1.5 hover:bg-paper-dim transition-colors"
@@ -92,6 +99,15 @@ export default function ElevePage({
             Admission d&apos;excellence
           </span>
         )}
+        {badges.map((b) => (
+          <span
+            key={b.titre}
+            title={b.description}
+            className="text-xs border border-ink text-ink px-2.5 py-1 bg-paper-dim"
+          >
+            {b.icone} {b.titre}
+          </span>
+        ))}
       </div>
 
       <div className="border-l-2 border-gold bg-white/60 px-5 py-4 mb-10">
@@ -143,6 +159,28 @@ export default function ElevePage({
                   <p className="text-[11px] text-slate mt-0.5">
                     Trimestre {ev.trimestre} · {ev.annee}
                   </p>
+                </div>
+              ))
+            )}
+          </div>
+
+          <h2 className="font-display text-lg text-ink mt-8 mb-3">💰 Historique financier</h2>
+          <div className="border border-line bg-white/60 divide-y divide-line">
+            {!eleve.historiqueFinancier || eleve.historiqueFinancier.length === 0 ? (
+              <p className="text-sm text-slate p-4">Aucune récompense perçue pour l&apos;instant.</p>
+            ) : (
+              eleve.historiqueFinancier.map((t) => (
+                <div key={t.id} className="px-4 py-2.5 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm text-ink">{t.motif}</p>
+                    <p className="text-[11px] text-slate mt-0.5">
+                      {t.trimestre ? `Trimestre ${t.trimestre} · ` : ""}
+                      {t.annee}
+                    </p>
+                  </div>
+                  <span className="text-sm font-medium text-forest shrink-0">
+                    +{formaterFCFA(t.montant)}
+                  </span>
                 </div>
               ))
             )}

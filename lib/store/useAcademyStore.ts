@@ -13,6 +13,9 @@ import {
 } from "../engines/grading";
 import { mulberry32, newSeed } from "../utils/random";
 import { construireResumeEtape } from "../engines/resume";
+import { scoreDuDomaine } from "../engines/domaines";
+import { crediterEleve, MONTANTS_CONCOURS } from "../engines/finances";
+import { v4 as uuid } from "uuid";
 
 interface AcademyState {
   session: Session | null;
@@ -31,6 +34,12 @@ interface AcademyState {
   enregistrerNote: (evaluationId: string, matricule: string, valeur: number) => void;
   genererNotesAleatoiresEvaluation: (evaluationId: string) => void;
   toggleFavori: (matricule: string) => void;
+  lancerConcours: (
+    nom: string,
+    domaine: "scientifique" | "litteraire" | "technologique" | "naturaliste" | "generale",
+    niveaux: string[] | null,
+    niveauLibelle: string
+  ) => void;
 }
 
 /** Recalcule et met à jour l'entrée de moyenne trimestrielle d'un élève
@@ -62,7 +71,8 @@ function calculerBilan(session: Session) {
     passages: eleves.filter((e) => e.statut === "actif" && e.redoublements === 0).length,
     redoublements: eleves.filter((e) => e.redoublements > 0).length,
     recales: eleves.filter((e) => e.statut === "recale").length,
-    diplomes: eleves.filter((e) => e.statut === "universite").length,
+    diplomes: eleves.filter((e) => e.statut === "diplome").length,
+    enPostBac: eleves.filter((e) => e.statut === "universite").length,
     prepaScientifique: eleves.filter((e) => e.niveau === "PrepaScientifique").length,
     prepaLitteraire: eleves.filter((e) => e.niveau === "PrepaLitteraire").length,
     dut: eleves.filter((e) => e.niveau === "DUT").length,
@@ -167,6 +177,52 @@ export const useAcademyStore = create<AcademyState>()(
         const idx = clone.favoris.indexOf(matricule);
         if (idx === -1) clone.favoris.push(matricule);
         else clone.favoris.splice(idx, 1);
+        set({ session: clone });
+      },
+
+      lancerConcours: (nom, domaine, niveaux, niveauLibelle) => {
+        const { session } = get();
+        if (!session) return;
+        const clone: Session = JSON.parse(JSON.stringify(session));
+
+        const eligibles = Object.values(clone.eleves).filter((e) => {
+          if (e.statut !== "actif" && e.statut !== "redoublant") return false;
+          if (niveaux && !niveaux.includes(e.niveau)) return false;
+          return true;
+        });
+
+        const classement = eligibles
+          .map((e) => ({
+            matricule: e.matricule,
+            nom: e.nom,
+            prenom: e.prenom,
+            score:
+              domaine === "generale"
+                ? e.moyennes[e.moyennes.length - 1]?.moyenneGenerale ?? 0
+                : scoreDuDomaine(e, domaine),
+          }))
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 5)
+          .map((e, i) => ({ ...e, rang: i + 1 }));
+
+        if (!clone.concours) clone.concours = [];
+        clone.concours.unshift({
+          id: uuid(),
+          nom,
+          domaine,
+          niveauLibelle,
+          annee: clone.anneeCourante.libelle,
+          podium: classement,
+        });
+
+        classement.forEach((p) => {
+          const montant = MONTANTS_CONCOURS[p.rang - 1];
+          if (montant) {
+            const eleve = clone.eleves[p.matricule];
+            if (eleve) crediterEleve(eleve, montant, `${nom} — ${p.rang}${p.rang === 1 ? "er" : "e"} place`, clone.anneeCourante.libelle);
+          }
+        });
+
         set({ session: clone });
       },
     }),

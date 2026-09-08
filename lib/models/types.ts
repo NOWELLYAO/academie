@@ -155,6 +155,10 @@ export interface Eleve {
   redoublements: number;
   admissiblePolytechnique?: boolean;
   anneesRedoublees: string[];
+  solde: number;
+  boursier: boolean;
+  historiqueFinancier: TransactionFinanciere[];
+  anneePostBac?: number; // année en cours dans le cursus post-bac actuel (1, 2, 3...)
 }
 
 export interface Classe {
@@ -196,6 +200,23 @@ export interface AnneeScolaireInfo {
     | "annee_suivante";
 }
 
+export interface TransactionFinanciere {
+  id: string;
+  motif: string;
+  montant: number;
+  annee: string;
+  trimestre?: number;
+}
+
+export interface ResultatConcours {
+  id: string;
+  nom: string;
+  domaine: "scientifique" | "litteraire" | "technologique" | "naturaliste" | "generale";
+  niveauLibelle: string; // ex: "Toute la génération", "Terminale"
+  annee: string;
+  podium: { matricule: string; nom: string; prenom: string; score: number; rang: number }[];
+}
+
 export interface Session {
   id: string;
   seed: number;
@@ -209,6 +230,7 @@ export interface Session {
   historiqueAnnees: string[]; // années déjà simulées
   historiqueBilans: SnapshotAnnee[]; // évolution de la génération, année par année
   favoris: string[]; // matricules des élèves marqués comme favoris
+  concours: ResultatConcours[];
   bilan?: BilanGeneration;
 }
 
@@ -218,6 +240,7 @@ export interface BilanGeneration {
   redoublements: number;
   recales: number;
   diplomes: number;
+  enPostBac: number;
   prepaScientifique: number;
   prepaLitteraire: number;
   dut: number;

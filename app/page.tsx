@@ -32,7 +32,7 @@ export default function AccueilPage() {
           Génération
         </h1>
         <p className="text-slate max-w-lg mb-10 leading-relaxed">
-          Prenez la direction d&apos;un établissement de 500 élèves, de la 3e à
+          Prenez la direction d&apos;un établissement de 600 élèves, de la 3e à
           l&apos;université. Notes, compétences, événements de parcours et
           orientation — chaque décision façonne une trajectoire.
         </p>
@@ -55,7 +55,7 @@ export default function AccueilPage() {
             {enCours ? "Génération de la promotion…" : "Nouvelle session →"}
           </button>
           <p className="text-[11px] text-slate mt-2">
-            Génère automatiquement 500 élèves répartis en 10 classes de 3e.
+            Génère automatiquement 600 élèves répartis en 10 classes de 3e.
           </p>
         </div>
 

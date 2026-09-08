@@ -59,7 +59,8 @@ export default function DashboardPage() {
   const meilleureClasse = classesParMoyenne[0];
 
   const recales = eleves.filter((e) => e.statut === "recale").length;
-  const universite = eleves.filter((e) => e.statut === "universite").length;
+  const enPostBac = eleves.filter((e) => e.statut === "universite").length;
+  const diplomes = eleves.filter((e) => e.statut === "diplome").length;
 
   return (
     <div className="p-10 max-w-6xl">
@@ -74,7 +75,7 @@ export default function DashboardPage() {
       </div>
 
       {(session.favoris ?? []).length === 0 && (
-        <div className="border border-gold bg-gold-soft/30 px-5 py-3 mb-8 flex items-center justify-between flex-wrap gap-2">
+        <div className="border border-gold bg-gold-soft/30 px-5 py-3 mb-6 flex items-center justify-between flex-wrap gap-2">
           <p className="text-sm text-ink">
             ★ Envie de suivre l&apos;évolution de quelques élèves en particulier ? Marquez-les
             comme favoris depuis leur fiche ou n&apos;importe quel tableau.
@@ -84,6 +85,43 @@ export default function DashboardPage() {
           </Link>
         </div>
       )}
+
+      <details className="border border-line bg-white/60 px-5 py-3 mb-8 text-sm">
+        <summary className="cursor-pointer font-medium text-ink">
+          ℹ️ Comment fonctionne la progression des élèves ?
+        </summary>
+        <div className="mt-3 space-y-2 text-slate leading-relaxed">
+          <p>
+            <strong className="text-ink">Avant le Bac :</strong> 3e (examen BEPC) → Seconde → Première →
+            Terminale (examen Bac). Seules la 3e et la Terminale ont un examen national ; entre les deux,
+            le passage se fait sur la seule moyenne annuelle.
+          </p>
+          <p>
+            <strong className="text-ink">Après le Bac</strong>, chaque cursus a une durée fixe et se
+            termine toujours par un diplôme — la simulation continue de suivre l&apos;élève chaque année
+            jusqu&apos;au bout, ce n&apos;est jamais une impasse :
+          </p>
+          <ul className="list-disc list-inside pl-2 space-y-0.5">
+            <li>DUT / BTS — 2 ans</li>
+            <li>Université — 3 ans</li>
+            <li>Classe préparatoire scientifique — 2 ans, puis 3 ans d&apos;école d&apos;ingénieurs (5 ans au total)</li>
+            <li>Classe préparatoire littéraire — 2 ans, puis université</li>
+            <li>École d&apos;ingénieurs en admission directe (excellence au Bac) — 5 ans</li>
+          </ul>
+          <p>
+            <strong className="text-ink">Redoublement :</strong> un seul redoublement est autorisé sur
+            tout le parcours d&apos;un élève, à n&apos;importe quel niveau. En cas de nouvel échec après ce
+            redoublement, l&apos;élève est recalé et sort définitivement du parcours scolaire classique.
+          </p>
+          <p>
+            Pour voir cette progression année après année,{" "}
+            <Link href="/evolution" className="text-ink border-b border-gold">
+              consultez la page Évolution
+            </Link>
+            , ou ouvrez la fiche d&apos;un élève pour son parcours complet et détaillé.
+          </p>
+        </div>
+      </details>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <StatCard label="Élèves actifs" value={actifs.length} sub={`sur ${eleves.length} au départ`} />
@@ -104,7 +142,8 @@ export default function DashboardPage() {
           sub={meilleureClasse ? `Moy. ${meilleureClasse.moyenne.toFixed(2)}` : ""}
         />
         <StatCard label="Recalés" value={recales} accent="burgundy" />
-        <StatCard label="Post-bac" value={universite} accent="forest" sub="Université, prépa, DUT, écoles" />
+        <StatCard label="En poursuite post-bac" value={enPostBac} accent="forest" sub="Prépa, DUT, université, école" />
+        <StatCard label="Diplômés" value={diplomes} accent="gold" sub="Cursus post-bac terminé" />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

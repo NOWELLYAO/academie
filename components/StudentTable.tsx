@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Eleve } from "@/lib/models/types";
-import { NOM_NIVEAU } from "@/lib/data/subjects";
+import { NOM_NIVEAU, LIBELLE_STATUT } from "@/lib/data/subjects";
 import FavoriteStar from "./FavoriteStar";
 import Avatar from "./Avatar";
 
@@ -74,7 +74,7 @@ export default function StudentTable({ eleves }: { eleves: Eleve[] }) {
                     <span className="text-slate">—</span>
                   )}
                 </td>
-                <td className="text-slate">{e.statut}</td>
+                <td className="text-slate">{LIBELLE_STATUT[e.statut] ?? e.statut}</td>
               </tr>
             );
           })}

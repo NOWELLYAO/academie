@@ -9,7 +9,7 @@ import { classerEleves, classerParMatiereListe } from "@/lib/engines/ranking";
 import { exporterPDF } from "@/lib/export/pdf";
 import { exporterExcel } from "@/lib/export/excel";
 import { LigneExport } from "@/lib/export/types";
-import { MATIERES, NOM_NIVEAU } from "@/lib/data/subjects";
+import { MATIERES, NOM_NIVEAU, LIBELLE_STATUT } from "@/lib/data/subjects";
 import { Niveau, SubjectKey } from "@/lib/models/types";
 
 const OPTIONS_TOP = [
@@ -277,7 +277,7 @@ export default function ExportsPage() {
                   <td className="text-slate">{l.classeNom}</td>
                   <td className="text-slate">{l.niveauLisible}</td>
                   <td>{l.moyenne.toFixed(2)}</td>
-                  <td className="text-slate capitalize">{l.statut}</td>
+                  <td className="text-slate">{LIBELLE_STATUT[l.statut] ?? l.statut}</td>
                 </tr>
               ))}
             </tbody>

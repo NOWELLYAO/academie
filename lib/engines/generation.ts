@@ -12,7 +12,7 @@ import { genererIdentiteUnique } from "../utils/identity";
 import { RNG, clamp, mulberry32, randGauss, randRange } from "../utils/random";
 
 const LETTRES_CLASSES = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
-const ELEVES_PAR_CLASSE = 50;
+const ELEVES_PAR_CLASSE = 60;
 
 // Distribution réaliste des profils de départ
 const DISTRIBUTION_PROFILS: { profil: ProfilType; poids: number }[] = [
@@ -123,7 +123,7 @@ function genererPotentiel(rng: RNG, profil: ProfilType): PotentielCache {
 }
 
 function genererMatricule(lettreClasse: string, index: number): string {
-  return `${lettreClasse}${String(index).padStart(3, "0")}`;
+  return `${lettreClasse}${index}`;
 }
 
 export function genererSession(
@@ -164,6 +164,9 @@ export function genererSession(
         assiduite: clamp(randGauss(rng, 85, 10), 40, 100),
         redoublements: 0,
         anneesRedoublees: [],
+        solde: 0,
+        boursier: false,
+        historiqueFinancier: [],
       };
 
       eleves[matricule] = eleve;
@@ -192,5 +195,6 @@ export function genererSession(
     historiqueAnnees: [],
     historiqueBilans: [],
     favoris: [],
+    concours: [],
   };
 }

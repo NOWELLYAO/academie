@@ -22,6 +22,9 @@ const LIENS = [
   { href: "/orientation", label: "Orientation", groupe: "analyse" },
   { href: "/statistiques", label: "Statistiques", groupe: "analyse" },
   { href: "/hall-of-fame", label: "Hall of Fame", groupe: "analyse" },
+  { href: "/tableau-honneur", label: "Tableau d'honneur", groupe: "analyse" },
+  { href: "/finances", label: "💰 Finances", groupe: "analyse" },
+  { href: "/concours", label: "Concours", groupe: "analyse" },
 ];
 
 export default function Sidebar() {

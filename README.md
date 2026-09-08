@@ -1,7 +1,7 @@
 # Académie — Génération 2026
 
 Simulateur de gestion scolaire et d'orientation. Générez une promotion de
-500 élèves en 3e et accompagnez-la, trimestre après trimestre, jusqu'à
+600 élèves en 3e et accompagnez-la, trimestre après trimestre, jusqu'à
 l'université ou une école d'ingénieurs.
 
 ## Démarrer en local
@@ -30,7 +30,7 @@ suivante).
 Toute la logique de simulation est isolée dans `/lib/engines`, indépendante
 de l'interface :
 
-- `generation.ts` — génère les 500 élèves et les 10 classes de 3e
+- `generation.ts` — génère les 600 élèves et les 10 classes de 3e
 - `potential.ts` — potentiel caché et volatilité (fait diverger deux
   élèves ayant la même moyenne aujourd'hui)
 - `progression.ts` — évolution des compétences avec inertie
@@ -47,7 +47,7 @@ une facilement plus tard (Postgres + Prisma, par exemple).
 
 ## Notes
 
-- Les 500 élèves sont générés à partir d'une seed aléatoire à chaque
+- Les 600 élèves sont générés à partir d'une seed aléatoire à chaque
   nouvelle session : deux sessions ne donnent jamais la même promotion,
   mais une même session reste reproductible.
 - La saisie manuelle de notes ("Gérer les notes") est disponible via le

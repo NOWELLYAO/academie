@@ -47,7 +47,7 @@ export default function ElevesPage() {
       <input
         value={recherche}
         onChange={(e) => setRecherche(e.target.value)}
-        placeholder="Rechercher par nom, prénom ou matricule (ex: A027)"
+        placeholder="Rechercher par nom, prénom ou matricule (ex: A27)"
         className="w-full max-w-md border border-line bg-white px-3 py-2 text-sm mb-6 focus:outline-none focus:border-ink"
       />
 

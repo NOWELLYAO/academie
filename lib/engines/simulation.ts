@@ -18,6 +18,14 @@ import {
   orienterPostBac,
 } from "./orientation";
 import { NOM_NIVEAU } from "../data/subjects";
+import { calculerMention, LIBELLE_MENTION } from "./mentions";
+import {
+  crediterEleve,
+  MONTANTS_MENTION,
+  MONTANT_ADMISSION_EXCELLENCE,
+  MONTANT_BOURSE_MERITE,
+  SEUIL_BOURSE_MERITE,
+} from "./finances";
 
 function rngDeSession(session: Session, sel: string): RNG {
   // Dérive une seed déterministe mais différente à chaque étape à partir
@@ -76,6 +84,18 @@ export function simulerTrimestre(session: Session, trimestre: 1 | 2 | 3): void {
     };
     eleve.moyennes.push(moyenne);
     calculerIndicateurProgression(eleve);
+
+    // Récompense de mérite liée à la mention du trimestre
+    const mention = calculerMention(moyenneGenerale);
+    if (mention) {
+      crediterEleve(
+        eleve,
+        MONTANTS_MENTION[mention],
+        `Mention "${LIBELLE_MENTION[mention]}" — T${trimestre}`,
+        session.anneeCourante.libelle,
+        trimestre
+      );
+    }
   });
 
   // Classements
@@ -157,7 +177,28 @@ export function simulerOrientation(session: Session): void {
   Object.values(session.eleves).forEach((eleve) => {
     if (eleve.statut !== "actif" && eleve.statut !== "redoublant") return;
 
-    const decision = decisionProgression(eleve, session.anneeCourante.libelle);
+    // Bourse au mérite : versée chaque année où la moyenne annuelle atteint
+    // le seuil, quel que soit le niveau. Le statut "boursier" est acquis
+    // définitivement dès la première fois.
+    const moyenneAnnee = eleve.moyennes[eleve.moyennes.length - 1]?.moyenneGenerale ?? 0;
+    if (moyenneAnnee >= SEUIL_BOURSE_MERITE) {
+      eleve.boursier = true;
+      crediterEleve(
+        eleve,
+        MONTANT_BOURSE_MERITE,
+        `Bourse au mérite — ${session.anneeCourante.libelle}`,
+        session.anneeCourante.libelle
+      );
+    }
+
+    let decision = decisionProgression(eleve, session.anneeCourante.libelle);
+
+    // Un seul redoublement autorisé sur tout le parcours scolaire : au-delà,
+    // c'est un recalage (règle simple et prévisible plutôt qu'un cycle
+    // indéfini de redoublements qui serait illisible).
+    if (decision === "redoublement" && eleve.redoublements >= 1) {
+      decision = "recale";
+    }
 
     if (decision === "recale") {
       eleve.statut = "recale";
@@ -165,7 +206,10 @@ export function simulerOrientation(session: Session): void {
         annee: session.anneeCourante.libelle,
         niveauOrigine: eleve.niveau,
         niveauDestination: "recale",
-        motif: "Résultats très insuffisants sur l'année.",
+        motif:
+          eleve.redoublements >= 1
+            ? "Nouvel échec après un redoublement — un seul redoublement est autorisé dans le parcours."
+            : "Résultats très insuffisants sur l'année.",
         scoreDetail: {},
       });
       return;
@@ -179,13 +223,25 @@ export function simulerOrientation(session: Session): void {
         annee: session.anneeCourante.libelle,
         niveauOrigine: eleve.niveau,
         niveauDestination: "redoublement",
-        motif: "Résultats insuffisants pour passer dans le niveau supérieur.",
+        motif: `Redoublement de ${NOM_NIVEAU[eleve.niveau]} — résultats insuffisants pour passer (1 seul redoublement autorisé au total).`,
         scoreDetail: {},
       });
       return;
     }
 
-    // passage ou avertissement -> orientation vers le niveau suivant
+    if (decision === "avertissement") {
+      // Passage accepté mais fragile — on le trace pour rester transparent
+      // sans pour autant bloquer la progression.
+      eleve.historiqueOrientation.push({
+        annee: session.anneeCourante.libelle,
+        niveauOrigine: eleve.niveau,
+        niveauDestination: eleve.niveau,
+        motif: "Passage accordé avec avertissement — résultats fragiles à surveiller.",
+        scoreDetail: {},
+      });
+    }
+
+    // passage (ou avertissement) -> orientation vers le niveau suivant
     if (eleve.niveau === "3e") {
       const entree = orienterFinDe3e(eleve, session.anneeCourante.libelle);
       eleve.niveau = entree.niveauDestination as Niveau;
@@ -227,12 +283,107 @@ export function simulerOrientation(session: Session): void {
         motif,
         scoreDetail: {},
       });
+      if (excellence) {
+        crediterEleve(
+          eleve,
+          MONTANT_ADMISSION_EXCELLENCE,
+          "Bourse d'excellence — admission post-bac",
+          session.anneeCourante.libelle
+        );
+      }
+      eleve.anneePostBac = 1;
     }
   });
 
+  avancerPostBac(session);
   recomposerClasses(session);
   capturerSnapshotAnnee(session);
   session.anneeCourante.etapeCourante = "annee_suivante";
+}
+
+/** Durée (en années) de chaque cursus post-bac. Une classe préparatoire
+ * débouche ensuite sur une école d'ingénieurs (3 années) ou l'université —
+ * ce qui porte bien le cursus scientifique complet à 5 ans, comme dans le
+ * système réel. Chaque parcours se termine par un diplôme (statut
+ * "diplome"), jamais par un blocage silencieux. */
+const DUREE_POST_BAC: Partial<Record<Niveau, number>> = {
+  PrepaScientifique: 2,
+  PrepaLitteraire: 2,
+  DUT: 2,
+  Universite: 3,
+  EcoleIngenieurs: 3, // 3 années après une prépa, 5 en admission directe (voir logique ci-dessous)
+};
+
+/** Fait avancer d'une année tous les élèves déjà engagés dans un cursus
+ * post-bac (statut "universite") : passage à l'année suivante, transition
+ * prépa -> école/université, ou obtention du diplôme final. C'est cette
+ * fonction qui manquait et qui faisait que le parcours semblait "s'arrêter"
+ * après le Bac. */
+function avancerPostBac(session: Session): void {
+  Object.values(session.eleves).forEach((eleve) => {
+    if (eleve.statut !== "universite") return;
+
+    eleve.anneePostBac = (eleve.anneePostBac ?? 0) + 1;
+    const annee = session.anneeCourante.libelle;
+
+    // Admission directe en école d'ingénieurs (excellence au Bac) : cursus
+    // complet de 5 ans dès le départ. Admission via prépa : 3 années
+    // restantes (2 déjà accomplies en classe préparatoire).
+    const duree =
+      eleve.niveau === "EcoleIngenieurs"
+        ? eleve.admissiblePolytechnique
+          ? 5
+          : 3
+        : DUREE_POST_BAC[eleve.niveau] ?? 3;
+
+    if (eleve.anneePostBac < duree) {
+      eleve.historiqueOrientation.push({
+        annee,
+        niveauOrigine: eleve.niveau,
+        niveauDestination: eleve.niveau,
+        motif: `Passage en ${eleve.anneePostBac + 1}e année de ${NOM_NIVEAU[eleve.niveau]}.`,
+        scoreDetail: {},
+      });
+      return;
+    }
+
+    // Fin du cycle en cours
+    if (eleve.niveau === "PrepaScientifique") {
+      eleve.niveau = "EcoleIngenieurs";
+      eleve.anneePostBac = 0;
+      eleve.historiqueOrientation.push({
+        annee,
+        niveauOrigine: "PrepaScientifique",
+        niveauDestination: "EcoleIngenieurs",
+        motif: "Admission à l'école d'ingénieurs à l'issue de la classe préparatoire (3 années restantes).",
+        scoreDetail: {},
+      });
+      return;
+    }
+
+    if (eleve.niveau === "PrepaLitteraire") {
+      eleve.niveau = "Universite";
+      eleve.anneePostBac = 0;
+      eleve.historiqueOrientation.push({
+        annee,
+        niveauOrigine: "PrepaLitteraire",
+        niveauDestination: "Universite",
+        motif: "Poursuite à l'université à l'issue de la classe préparatoire littéraire.",
+        scoreDetail: {},
+      });
+      return;
+    }
+
+    // DUT, Université ou École d'ingénieurs achevés -> diplôme, fin de parcours
+    eleve.statut = "diplome";
+    eleve.historiqueOrientation.push({
+      annee,
+      niveauOrigine: eleve.niveau,
+      niveauDestination: eleve.niveau,
+      motif: `Diplômé — ${NOM_NIVEAU[eleve.niveau]} (cursus de ${duree} an${duree > 1 ? "s" : ""}).`,
+      scoreDetail: {},
+    });
+  });
 }
 
 /** Enregistre une photographie de la génération à la fin de l'année qui

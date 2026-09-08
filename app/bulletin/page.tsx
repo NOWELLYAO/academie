@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useAcademyStore } from "@/lib/store/useAcademyStore";
 import PageHeader from "@/components/PageHeader";
-import { MATIERES } from "@/lib/data/subjects";
+import { MATIERES, LIBELLE_STATUT } from "@/lib/data/subjects";
 import { classerParMatiere } from "@/lib/engines/ranking";
 import RangBadge from "@/components/RangBadge";
 import { Eleve, SubjectKey } from "@/lib/models/types";
@@ -277,7 +277,7 @@ export default function BulletinPage() {
                     </td>
                     <td className="tabular-nums">{Math.round(e.competences.regularite)}/100</td>
                     <td className="tabular-nums">{Math.round(e.assiduite)}/100</td>
-                    <td className="text-slate capitalize">{e.statut}</td>
+                    <td className="text-slate">{LIBELLE_STATUT[e.statut] ?? e.statut}</td>
                   </tr>
                 );
               })}

@@ -193,7 +193,7 @@ export default function ComparateurPage() {
             <input
               value={matriculeEleve}
               onChange={(e) => setMatriculeEleve(e.target.value.toUpperCase())}
-              placeholder="ex: A027"
+              placeholder="ex: A27"
               className="border border-line bg-white px-3 py-2 text-sm w-40"
             />
           </div>
@@ -232,7 +232,7 @@ export default function ComparateurPage() {
               <input
                 value={matriculeEleveA}
                 onChange={(e) => setMatriculeEleveA(e.target.value.toUpperCase())}
-                placeholder="ex: A027"
+                placeholder="ex: A27"
                 className="border border-line bg-white px-3 py-2 text-sm w-40"
               />
             </div>
@@ -243,7 +243,7 @@ export default function ComparateurPage() {
               <input
                 value={matriculeEleveB}
                 onChange={(e) => setMatriculeEleveB(e.target.value.toUpperCase())}
-                placeholder="ex: D014"
+                placeholder="ex: D14"
                 className="border border-line bg-white px-3 py-2 text-sm w-40"
               />
             </div>

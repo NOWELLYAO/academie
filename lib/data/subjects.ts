@@ -80,3 +80,11 @@ export const NOM_NIVEAU: Record<Niveau, string> = {
   Universite: "Université",
   EcoleIngenieurs: "École d'ingénieurs",
 };
+
+export const LIBELLE_STATUT: Record<string, string> = {
+  actif: "Scolarité en cours",
+  redoublant: "Redoublant",
+  recale: "Recalé — sorti du parcours",
+  diplome: "Diplômé",
+  universite: "Post-bac en cours",
+};
