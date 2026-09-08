@@ -17,6 +17,9 @@ import CompetenceBars from "@/components/CompetenceBars";
 import ParcoursCarte from "@/components/ParcoursCarte";
 import { NOM_NIVEAU } from "@/lib/data/subjects";
 import { qualifierPotentiel, qualifierVolatilite } from "@/lib/engines/potential";
+import { genererAppreciation } from "@/lib/engines/narrative";
+import { exporterBulletinIndividuel } from "@/lib/export/pdf";
+import FavoriteStar from "@/components/FavoriteStar";
 
 export default function ElevePage({
   params,
@@ -39,6 +42,7 @@ export default function ElevePage({
 
   const derniere = eleve.moyennes[eleve.moyennes.length - 1];
   const nomClasse = session.classes.find((c) => c.id === eleve.classeId)?.nom ?? eleve.classeId;
+  const appreciation = genererAppreciation(eleve);
   const dataGraphique = eleve.moyennes.map((m, i) => ({
     label: `T${m.trimestre} ${m.annee.split("-")[0]}`,
     moyenne: m.moyenneGenerale,
@@ -54,8 +58,13 @@ export default function ElevePage({
       <div className="flex items-start justify-between flex-wrap gap-4 mb-2">
         <PageHeader
           eyebrow={`${eleve.matricule} · ${nomClasse}`}
-          title={`${eleve.nom} ${eleve.prenom}`}
-          description={NOM_NIVEAU[eleve.niveau]}
+          title={
+            <span className="inline-flex items-center gap-2">
+              {eleve.nom} {eleve.prenom}
+              <FavoriteStar matricule={eleve.matricule} size="text-2xl" />
+            </span>
+          }
+          description={`${NOM_NIVEAU[eleve.niveau]} · Origine ${eleve.pays}`}
         />
         <div className="text-right">
           <div className="text-[11px] uppercase tracking-wide text-slate">Moyenne générale</div>
@@ -67,6 +76,12 @@ export default function ElevePage({
               Rang {derniere.rangClasse} classe · {derniere.rangGeneration} génération
             </div>
           )}
+          <button
+            onClick={() => exporterBulletinIndividuel(eleve, nomClasse, session.nomSession, appreciation)}
+            className="mt-3 text-xs border border-ink text-ink px-3 py-1.5 hover:bg-paper-dim transition-colors"
+          >
+            Télécharger le bulletin PDF
+          </button>
         </div>
       </div>
 
@@ -74,7 +89,7 @@ export default function ElevePage({
         <ParcoursCarte eleve={eleve} />
       </div>
 
-      <div className="flex gap-2 mb-8">
+      <div className="flex gap-2 mb-6">
         <span className="text-xs border border-gold text-ink px-2.5 py-1 bg-gold-soft/40">
           {qualifierPotentiel(eleve)}
         </span>
@@ -86,6 +101,15 @@ export default function ElevePage({
             Admissible Polytechnique
           </span>
         )}
+      </div>
+
+      <div className="border-l-2 border-gold bg-white/60 px-5 py-4 mb-10">
+        <div className="text-[11px] uppercase tracking-wide text-slate mb-1.5">
+          Appréciation du conseil de classe
+        </div>
+        <p className="font-display text-base text-ink leading-relaxed italic">
+          &laquo; {appreciation} &raquo;
+        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">

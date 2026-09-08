@@ -8,8 +8,8 @@ import {
   Session,
   SubjectKey,
 } from "../models/types";
-import { NOMS_FAMILLE, PRENOMS_FEMININS, PRENOMS_MASCULINS } from "../data/names";
-import { RNG, clamp, mulberry32, pick, randGauss, randRange } from "../utils/random";
+import { genererIdentiteUnique } from "../utils/identity";
+import { RNG, clamp, mulberry32, randGauss, randRange } from "../utils/random";
 
 const LETTRES_CLASSES = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
 const ELEVES_PAR_CLASSE = 50;
@@ -134,15 +134,14 @@ export function genererSession(
   const rng = mulberry32(seed);
   const classes: Classe[] = [];
   const eleves: Record<string, Eleve> = {};
+  const identitesUtilisees = new Set<string>();
 
   LETTRES_CLASSES.forEach((lettre) => {
     const classeId = `3e-${lettre}`;
     const matricules: string[] = [];
 
     for (let i = 1; i <= ELEVES_PAR_CLASSE; i++) {
-      const estFille = rng() < 0.5;
-      const nom = pick(rng, NOMS_FAMILLE);
-      const prenom = estFille ? pick(rng, PRENOMS_FEMININS) : pick(rng, PRENOMS_MASCULINS);
+      const { nom, prenom, pays } = genererIdentiteUnique(rng, identitesUtilisees);
       const matricule = genererMatricule(lettre, i);
       const profil = tirerProfil(rng);
 
@@ -150,6 +149,7 @@ export function genererSession(
         matricule,
         nom,
         prenom,
+        pays,
         classeId,
         niveau: "3e",
         statut: "actif",
@@ -190,5 +190,6 @@ export function genererSession(
     eleves,
     evaluations: [],
     historiqueAnnees: [],
+    favoris: [],
   };
 }

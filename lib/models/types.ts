@@ -131,6 +131,7 @@ export interface Eleve {
   matricule: string;
   nom: string;
   prenom: string;
+  pays: string;
   classeId: string;
   niveau: Niveau;
   statut: Statut;
@@ -198,6 +199,7 @@ export interface Session {
   eleves: Record<string, Eleve>; // matricule -> eleve
   evaluations: EvaluationDef[];
   historiqueAnnees: string[]; // années déjà simulées
+  favoris: string[]; // matricules des élèves marqués comme favoris
   bilan?: BilanGeneration;
 }
 

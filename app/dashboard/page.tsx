@@ -72,6 +72,18 @@ export default function DashboardPage() {
         <TimelineControl />
       </div>
 
+      {(session.favoris ?? []).length === 0 && (
+        <div className="border border-gold bg-gold-soft/30 px-5 py-3 mb-8 flex items-center justify-between flex-wrap gap-2">
+          <p className="text-sm text-ink">
+            ★ Envie de suivre l&apos;évolution de quelques élèves en particulier ? Marquez-les
+            comme favoris depuis leur fiche ou n&apos;importe quel tableau.
+          </p>
+          <Link href="/eleves" className="text-sm text-ink border-b border-gold hover:text-ink-soft shrink-0">
+            Choisir mes favoris →
+          </Link>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <StatCard label="Élèves actifs" value={actifs.length} sub={`sur ${eleves.length} au départ`} />
         <StatCard label="Classes" value={session.classes.length} />

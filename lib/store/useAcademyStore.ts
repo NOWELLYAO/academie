@@ -22,6 +22,7 @@ interface AcademyState {
     coefficient: number
   ) => string;
   enregistrerNote: (evaluationId: string, matricule: string, valeur: number) => void;
+  toggleFavori: (matricule: string) => void;
 }
 
 function calculerBilan(session: Session) {
@@ -123,6 +124,17 @@ export const useAcademyStore = create<AcademyState>()(
           entree.moyenneGenerale = moyenneGenerale;
         }
 
+        set({ session: clone });
+      },
+
+      toggleFavori: (matricule: string) => {
+        const { session } = get();
+        if (!session) return;
+        const clone: Session = JSON.parse(JSON.stringify(session));
+        if (!clone.favoris) clone.favoris = [];
+        const idx = clone.favoris.indexOf(matricule);
+        if (idx === -1) clone.favoris.push(matricule);
+        else clone.favoris.splice(idx, 1);
         set({ session: clone });
       },
     }),

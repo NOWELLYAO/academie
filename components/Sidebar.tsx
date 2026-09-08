@@ -8,12 +8,14 @@ import { useAcademyStore } from "@/lib/store/useAcademyStore";
 const LIENS = [
   { href: "/", label: "Accueil", groupe: "principal" },
   { href: "/dashboard", label: "Tableau de bord", groupe: "principal" },
+  { href: "/favoris", label: "★ Mes favoris", groupe: "principal" },
   { href: "/classes", label: "Classes", groupe: "gestion" },
   { href: "/eleves", label: "Élèves", groupe: "gestion" },
   { href: "/notes", label: "Notes", groupe: "gestion" },
   { href: "/resultats", label: "Résultats", groupe: "gestion" },
   { href: "/bulletin", label: "Bulletin complet", groupe: "gestion" },
   { href: "/exports", label: "Fiches PDF / Excel", groupe: "gestion" },
+  { href: "/comparateur", label: "Comparateur", groupe: "analyse" },
   { href: "/classements", label: "Classements", groupe: "analyse" },
   { href: "/eleves-a-suivre", label: "Élèves à suivre", groupe: "analyse" },
   { href: "/orientation", label: "Orientation", groupe: "analyse" },
@@ -24,6 +26,7 @@ const LIENS = [
 export default function Sidebar() {
   const pathname = usePathname();
   const session = useAcademyStore((s) => s.session);
+  const favorisCount = session?.favoris?.length ?? 0;
 
   return (
     <aside className="w-64 shrink-0 bg-ink text-paper flex flex-col border-r border-ink-soft">
@@ -55,6 +58,9 @@ export default function Sidebar() {
                       )}
                     >
                       {lien.label}
+                      {lien.href === "/favoris" && favorisCount > 0 && (
+                        <span className="ml-1.5 text-[10px] text-gold">({favorisCount})</span>
+                      )}
                     </Link>
                   </li>
                 );

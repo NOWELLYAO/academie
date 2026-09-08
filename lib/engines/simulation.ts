@@ -215,7 +215,10 @@ export function simulerOrientation(session: Session): void {
   session.anneeCourante.etapeCourante = "annee_suivante";
 }
 
-/** Recompose les classes après un changement de niveau (ex: 3e A -> Seconde C1). */
+/** Recompose les classes après un changement de niveau (ex: 3e A -> Seconde C1).
+ * Les élèves sont triés par mérite (moyenne générale la plus récente) avant
+ * répartition : le groupe 1 rassemble toujours les meilleurs éléments de la
+ * série, le groupe 2 le niveau suivant, etc. (ex: 1ère C1 plus fort que 1ère C2). */
 function recomposerClasses(session: Session): void {
   const niveaux = new Set(
     Object.values(session.eleves)
@@ -226,20 +229,27 @@ function recomposerClasses(session: Session): void {
   const nouvellesClasses: Classe[] = [];
 
   niveaux.forEach((niveau) => {
-    const elevesDuNiveau = Object.values(session.eleves).filter(
-      (e) => e.niveau === niveau && (e.statut === "actif" || e.statut === "redoublant")
-    );
+    const elevesDuNiveau = Object.values(session.eleves)
+      .filter((e) => e.niveau === niveau && (e.statut === "actif" || e.statut === "redoublant"))
+      .sort((a, b) => {
+        const moyA = a.moyennes[a.moyennes.length - 1]?.moyenneGenerale ?? 0;
+        const moyB = b.moyennes[b.moyennes.length - 1]?.moyenneGenerale ?? 0;
+        return moyB - moyA;
+      });
+
     const taillesClasse = 45;
     const nbClasses = Math.max(1, Math.ceil(elevesDuNiveau.length / taillesClasse));
 
     for (let i = 0; i < nbClasses; i++) {
-      const suffixe = String.fromCharCode(65 + i); // A, B, C...
-      const id = `${niveau}-${suffixe}`;
+      const id = `${niveau}-${i + 1}`;
       const membres = elevesDuNiveau.slice(i * taillesClasse, (i + 1) * taillesClasse);
       membres.forEach((e) => (e.classeId = id));
       nouvellesClasses.push({
         id,
-        nom: `${NOM_NIVEAU[niveau]} ${suffixe}`,
+        // Le numéro de groupe est accolé directement à la série, sans espace
+        // (ex: "Seconde A1", "1ère C2") pour bien le distinguer de la lettre
+        // de série elle-même. Le groupe 1 contient les meilleurs éléments.
+        nom: nbClasses > 1 ? `${NOM_NIVEAU[niveau]}${i + 1}` : NOM_NIVEAU[niveau],
         niveau,
         matricules: membres.map((e) => e.matricule),
         annee: session.anneeCourante.libelle,

@@ -7,6 +7,7 @@ import PageHeader from "@/components/PageHeader";
 import RangBadge from "@/components/RangBadge";
 import { classerClasse } from "@/lib/engines/ranking";
 import { qualifierPotentiel } from "@/lib/engines/potential";
+import { genererAppreciationCourte } from "@/lib/engines/narrative";
 import { NOM_NIVEAU } from "@/lib/data/subjects";
 import { Eleve, Niveau } from "@/lib/models/types";
 
@@ -56,6 +57,24 @@ export default function ElevesASuivrePage() {
     const carte: Record<string, string> = {};
     session.classes.forEach((c) => (carte[c.id] = c.nom));
     return carte;
+  }, [session]);
+
+  const elevesEnDifficulte = useMemo(() => {
+    if (!session) return [];
+    const eleves = Object.values(session.eleves).filter(
+      (e) => e.statut === "actif" || e.statut === "redoublant"
+    );
+
+    return eleves
+      .map((e) => {
+        const derniere = e.moyennes[e.moyennes.length - 1];
+        const progression = e.competences.progression ?? 0;
+        const enRisque = !!derniere && (derniere.moyenneGenerale < 9 || progression <= -25);
+        return { eleve: e, derniere, progression, enRisque };
+      })
+      .filter((x) => x.enRisque)
+      .sort((a, b) => (a.derniere?.moyenneGenerale ?? 0) - (b.derniere?.moyenneGenerale ?? 0))
+      .slice(0, 24);
   }, [session]);
 
   if (!session) {
@@ -165,6 +184,45 @@ export default function ElevesASuivrePage() {
               {dernierEvenement && (
                 <p className="text-xs text-slate mt-2 leading-snug">{dernierEvenement.description}</p>
               )}
+            </Link>
+          ))}
+        </div>
+      )}
+
+      <h2 className="font-display text-lg text-ink mb-2 mt-12">⚠ Élèves en difficulté</h2>
+      <p className="text-sm text-slate mb-4 max-w-2xl">
+        Moyenne générale sous la barre des 9/20 ou net décrochage constaté sur les derniers
+        trimestres — des situations qui méritent un accompagnement rapproché.
+      </p>
+
+      {elevesEnDifficulte.length === 0 ? (
+        <p className="text-sm text-slate">
+          Aucun élève en situation de décrochage identifié pour l&apos;instant.
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {elevesEnDifficulte.map(({ eleve: e, derniere, progression }) => (
+            <Link
+              key={e.matricule}
+              href={`/eleves/${e.matricule}`}
+              className="border border-line bg-white/60 p-4 hover:border-burgundy transition-colors"
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-sm font-medium text-ink">
+                  {e.nom} {e.prenom}
+                </span>
+                <span className="text-xs text-slate">{e.matricule}</span>
+              </div>
+              <div className="text-xs text-slate mb-2">{nomsClasses[e.classeId] ?? e.classeId}</div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs border border-burgundy text-burgundy px-2 py-0.5 bg-burgundy-soft/40 inline-block">
+                  Moy. {derniere ? derniere.moyenneGenerale.toFixed(2) : "—"}
+                </span>
+                {progression < 0 && (
+                  <span className="text-xs text-burgundy">▼ {Math.abs(progression)}</span>
+                )}
+              </div>
+              <p className="text-xs text-slate leading-snug">{genererAppreciationCourte(e)}</p>
             </Link>
           ))}
         </div>
