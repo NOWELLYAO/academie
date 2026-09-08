@@ -190,6 +190,7 @@ export function genererSession(
     eleves,
     evaluations: [],
     historiqueAnnees: [],
+    historiqueBilans: [],
     favoris: [],
   };
 }

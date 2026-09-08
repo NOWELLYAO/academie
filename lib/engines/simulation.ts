@@ -231,7 +231,51 @@ export function simulerOrientation(session: Session): void {
   });
 
   recomposerClasses(session);
+  capturerSnapshotAnnee(session);
   session.anneeCourante.etapeCourante = "annee_suivante";
+}
+
+/** Enregistre une photographie de la génération à la fin de l'année qui
+ * vient de s'achever (répartition par niveau, moyenne, taux de réussite,
+ * destinations post-bac) pour permettre de tracer son évolution dans le
+ * temps sur plusieurs années. */
+function capturerSnapshotAnnee(session: Session): void {
+  const eleves = Object.values(session.eleves);
+  const actifs = eleves.filter((e) => e.statut === "actif" || e.statut === "redoublant");
+
+  const repartitionNiveaux: Partial<Record<Niveau, number>> = {};
+  eleves.forEach((e) => {
+    // On ne compte que les élèves encore "vivants" dans le parcours
+    // (actifs, redoublants, ou déjà en post-bac) — pas les recalés.
+    if (e.statut === "recale") return;
+    repartitionNiveaux[e.niveau] = (repartitionNiveaux[e.niveau] ?? 0) + 1;
+  });
+
+  const moyennes = actifs
+    .map((e) => e.moyennes[e.moyennes.length - 1]?.moyenneGenerale)
+    .filter((m): m is number => m !== undefined);
+  const moyenneGenerale = moyennes.length
+    ? Math.round((moyennes.reduce((a, b) => a + b, 0) / moyennes.length) * 100) / 100
+    : 0;
+  const tauxReussite = moyennes.length
+    ? Math.round((moyennes.filter((m) => m >= 10).length / moyennes.length) * 100)
+    : 0;
+
+  session.historiqueBilans.push({
+    annee: session.anneeCourante.libelle,
+    repartitionNiveaux,
+    moyenneGenerale,
+    tauxReussite,
+    passages: eleves.filter((e) => e.statut === "actif").length,
+    redoublements: eleves.filter((e) => e.statut === "redoublant").length,
+    recales: eleves.filter((e) => e.statut === "recale").length,
+    prepaScientifique: eleves.filter((e) => e.niveau === "PrepaScientifique").length,
+    prepaLitteraire: eleves.filter((e) => e.niveau === "PrepaLitteraire").length,
+    dut: eleves.filter((e) => e.niveau === "DUT").length,
+    universitaires: eleves.filter((e) => e.niveau === "Universite").length,
+    ecolesIngenieurs: eleves.filter((e) => e.niveau === "EcoleIngenieurs").length,
+    admissionExcellence: eleves.filter((e) => e.admissiblePolytechnique).length,
+  });
 }
 
 /** Recompose les classes après un changement de niveau (ex: 3e A -> Seconde C1).

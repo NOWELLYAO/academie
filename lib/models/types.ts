@@ -35,6 +35,11 @@ export const ORDRE_NIVEAUX: Niveau[] = [
   "TermC",
   "TermD",
   "TermA",
+  "EcoleIngenieurs",
+  "PrepaScientifique",
+  "PrepaLitteraire",
+  "DUT",
+  "Universite",
 ];
 
 export type Statut =
@@ -202,6 +207,7 @@ export interface Session {
   eleves: Record<string, Eleve>; // matricule -> eleve
   evaluations: EvaluationDef[];
   historiqueAnnees: string[]; // années déjà simulées
+  historiqueBilans: SnapshotAnnee[]; // évolution de la génération, année par année
   favoris: string[]; // matricules des élèves marqués comme favoris
   bilan?: BilanGeneration;
 }
@@ -218,4 +224,22 @@ export interface BilanGeneration {
   universitaires: number;
   ecolesIngenieurs: number;
   admisPolytechnique: number;
+}
+
+/** Photographie de la génération à la fin d'une année scolaire (après
+ * orientation), pour pouvoir tracer son évolution dans le temps. */
+export interface SnapshotAnnee {
+  annee: string;
+  repartitionNiveaux: Partial<Record<Niveau, number>>;
+  moyenneGenerale: number;
+  tauxReussite: number;
+  passages: number;
+  redoublements: number;
+  recales: number;
+  prepaScientifique: number;
+  prepaLitteraire: number;
+  dut: number;
+  universitaires: number;
+  ecolesIngenieurs: number;
+  admissionExcellence: number;
 }

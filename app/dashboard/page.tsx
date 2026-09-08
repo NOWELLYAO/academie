@@ -7,6 +7,7 @@ import StatCard from "@/components/StatCard";
 import TimelineControl from "@/components/TimelineControl";
 import EventFeed from "@/components/EventFeed";
 import { NOM_NIVEAU } from "@/lib/data/subjects";
+import { ORDRE_NIVEAUX } from "@/lib/models/types";
 
 export default function DashboardPage() {
   const session = useAcademyStore((s) => s.session);
@@ -109,18 +110,25 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
           <h2 className="font-display text-lg text-ink mb-3">Répartition par niveau</h2>
+          <p className="text-xs text-slate mb-2">
+            Du collège jusqu&apos;au post-bac — inclut les élèves déjà orientés vers une prépa, un
+            DUT, l&apos;université ou une école d&apos;ingénieurs.
+          </p>
           <div className="border border-line bg-white/60 divide-y divide-line">
-            {Object.entries(
-              actifs.reduce<Record<string, number>>((acc, e) => {
-                acc[e.niveau] = (acc[e.niveau] ?? 0) + 1;
-                return acc;
-              }, {})
-            ).map(([niveau, count]) => (
-              <div key={niveau} className="px-4 py-2.5 flex justify-between text-sm">
-                <span className="text-slate">{NOM_NIVEAU[niveau as keyof typeof NOM_NIVEAU] ?? niveau}</span>
-                <span className="font-medium tabular-nums">{count}</span>
-              </div>
-            ))}
+            {(() => {
+              const repartition = eleves
+                .filter((e) => e.statut !== "recale")
+                .reduce<Record<string, number>>((acc, e) => {
+                  acc[e.niveau] = (acc[e.niveau] ?? 0) + 1;
+                  return acc;
+                }, {});
+              return ORDRE_NIVEAUX.filter((n) => repartition[n] > 0).map((niveau) => (
+                <div key={niveau} className="px-4 py-2.5 flex justify-between text-sm">
+                  <span className="text-slate">{NOM_NIVEAU[niveau]}</span>
+                  <span className="font-medium tabular-nums">{repartition[niveau]}</span>
+                </div>
+              ));
+            })()}
           </div>
         </div>
 

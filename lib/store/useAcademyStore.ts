@@ -12,10 +12,12 @@ import {
   saisirNote,
 } from "../engines/grading";
 import { mulberry32, newSeed } from "../utils/random";
+import { construireResumeEtape } from "../engines/resume";
 
 interface AcademyState {
   session: Session | null;
   sessionsHistorique: { id: string; nom: string; dateCreation: string }[];
+  dernierResume: string | null;
   nouvelleSession: (nom: string) => void;
   avancerEtape: () => void;
   reinitialiser: () => void;
@@ -75,12 +77,14 @@ export const useAcademyStore = create<AcademyState>()(
     (set, get) => ({
       session: null,
       sessionsHistorique: [],
+      dernierResume: null,
 
       nouvelleSession: (nom: string) => {
         const seed = newSeed();
         const session = genererSession(seed, nom);
         set((state) => ({
           session,
+          dernierResume: null,
           sessionsHistorique: [
             { id: session.id, nom: session.nomSession, dateCreation: session.dateCreation },
             ...state.sessionsHistorique,
@@ -91,11 +95,14 @@ export const useAcademyStore = create<AcademyState>()(
       avancerEtape: () => {
         const { session } = get();
         if (!session) return;
+        const etapeAvant = session.anneeCourante.etapeCourante;
+        const anneeAvant = session.anneeCourante.libelle;
         // Clone profond pour garantir la réactivité de zustand
         const clone: Session = JSON.parse(JSON.stringify(session));
         etapeSuivante(clone);
         clone.bilan = calculerBilan(clone);
-        set({ session: clone });
+        const resume = construireResumeEtape(etapeAvant, anneeAvant, session, clone);
+        set({ session: clone, dernierResume: resume });
       },
 
       reinitialiser: () => set({ session: null }),

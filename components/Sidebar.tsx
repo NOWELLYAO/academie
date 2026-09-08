@@ -16,6 +16,7 @@ const LIENS = [
   { href: "/bulletin", label: "Bulletin complet", groupe: "gestion" },
   { href: "/exports", label: "Fiches PDF / Excel", groupe: "gestion" },
   { href: "/comparateur", label: "Comparateur", groupe: "analyse" },
+  { href: "/evolution", label: "📈 Évolution génération", groupe: "analyse" },
   { href: "/classements", label: "Classements", groupe: "analyse" },
   { href: "/eleves-a-suivre", label: "Élèves à suivre", groupe: "analyse" },
   { href: "/orientation", label: "Orientation", groupe: "analyse" },
