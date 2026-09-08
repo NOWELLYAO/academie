@@ -10,6 +10,7 @@ import { qualifierPotentiel } from "@/lib/engines/potential";
 import { genererAppreciationCourte } from "@/lib/engines/narrative";
 import { NOM_NIVEAU } from "@/lib/data/subjects";
 import { Eleve, Niveau } from "@/lib/models/types";
+import Avatar from "@/components/Avatar";
 
 export default function ElevesASuivrePage() {
   const session = useAcademyStore((s) => s.session);
@@ -132,6 +133,7 @@ export default function ElevesASuivrePage() {
                             >
                               <span className="text-slate w-4 shrink-0">{e.rang}</span>
                               <RangBadge rang={e.rang} />
+                              <Avatar matricule={e.matricule} nom={e.nom} prenom={e.prenom} size={22} />
                               <span className="ml-1.5 truncate">
                                 {e.nom} {e.prenom}
                               </span>
@@ -172,10 +174,11 @@ export default function ElevesASuivrePage() {
               className="border border-line bg-white/60 p-4 hover:border-gold transition-colors"
             >
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-sm font-medium text-ink">
-                  {e.nom} {e.prenom}
+                <span className="flex items-center gap-2 text-sm font-medium text-ink min-w-0">
+                  <Avatar matricule={e.matricule} nom={e.nom} prenom={e.prenom} size={26} />
+                  <span className="truncate">{e.nom} {e.prenom}</span>
                 </span>
-                <span className="text-xs text-slate">{e.matricule}</span>
+                <span className="text-xs text-slate shrink-0">{e.matricule}</span>
               </div>
               <div className="text-xs text-slate mb-2">{nomsClasses[e.classeId] ?? e.classeId}</div>
               <span className="text-[11px] border border-gold text-ink px-2 py-0.5 bg-gold-soft/40 inline-block">
@@ -208,10 +211,11 @@ export default function ElevesASuivrePage() {
               className="border border-line bg-white/60 p-4 hover:border-burgundy transition-colors"
             >
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-sm font-medium text-ink">
-                  {e.nom} {e.prenom}
+                <span className="flex items-center gap-2 text-sm font-medium text-ink min-w-0">
+                  <Avatar matricule={e.matricule} nom={e.nom} prenom={e.prenom} size={26} />
+                  <span className="truncate">{e.nom} {e.prenom}</span>
                 </span>
-                <span className="text-xs text-slate">{e.matricule}</span>
+                <span className="text-xs text-slate shrink-0">{e.matricule}</span>
               </div>
               <div className="text-xs text-slate mb-2">{nomsClasses[e.classeId] ?? e.classeId}</div>
               <div className="flex items-center gap-2 mb-2">

@@ -17,6 +17,7 @@ import PageHeader from "@/components/PageHeader";
 import { MATIERES } from "@/lib/data/subjects";
 import { derniereMoyenneMatiere } from "@/lib/engines/ranking";
 import { Eleve, SubjectKey } from "@/lib/models/types";
+import Avatar from "@/components/Avatar";
 
 type Mode = "classes" | "eleve" | "eleves";
 
@@ -258,9 +259,12 @@ export default function ComparateurPage() {
                   const nomClasse = session.classes.find((c) => c.id === e.classeId)?.nom ?? e.classeId;
                   return (
                     <div key={e.matricule} className="border border-line bg-white/60 px-4 py-3">
-                      <Link href={`/eleves/${e.matricule}`} className="text-sm font-medium text-ink hover:text-gold">
-                        {e.nom} {e.prenom}
-                      </Link>
+                      <div className="flex items-center gap-3 mb-1">
+                        <Avatar matricule={e.matricule} nom={e.nom} prenom={e.prenom} size={32} />
+                        <Link href={`/eleves/${e.matricule}`} className="text-sm font-medium text-ink hover:text-gold">
+                          {e.nom} {e.prenom}
+                        </Link>
+                      </div>
                       <div className="text-xs text-slate mt-0.5">
                         {e.matricule} · {nomClasse}
                       </div>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Eleve } from "@/lib/models/types";
 import { NOM_NIVEAU } from "@/lib/data/subjects";
 import FavoriteStar from "./FavoriteStar";
+import Avatar from "./Avatar";
 
 function couleurMoyenne(m: number): string {
   if (m >= 16) return "text-forest font-semibold";
@@ -25,6 +26,7 @@ export default function StudentTable({ eleves }: { eleves: Eleve[] }) {
         <thead>
           <tr>
             <th></th>
+            <th></th>
             <th>Rang</th>
             <th>Matricule</th>
             <th>Élève</th>
@@ -44,6 +46,11 @@ export default function StudentTable({ eleves }: { eleves: Eleve[] }) {
                   <FavoriteStar matricule={e.matricule} />
                 </td>
                 <td className="text-slate">{i + 1}</td>
+                <td>
+                  <Link href={`/eleves/${e.matricule}`}>
+                    <Avatar matricule={e.matricule} nom={e.nom} prenom={e.prenom} size={28} />
+                  </Link>
+                </td>
                 <td className="font-medium">
                   <Link href={`/eleves/${e.matricule}`} className="hover:text-gold">
                     {e.matricule}

@@ -12,6 +12,7 @@ import { qualifierPotentiel, qualifierVolatilite } from "@/lib/engines/potential
 import { genererAppreciation } from "@/lib/engines/narrative";
 import { exporterBulletinIndividuel } from "@/lib/export/pdf";
 import FavoriteStar from "@/components/FavoriteStar";
+import Avatar from "@/components/Avatar";
 
 export default function ElevePage({
   params,
@@ -43,16 +44,19 @@ export default function ElevePage({
       </Link>
 
       <div className="flex items-start justify-between flex-wrap gap-4 mb-2">
-        <PageHeader
-          eyebrow={`${eleve.matricule} · ${nomClasse}`}
-          title={
-            <span className="inline-flex items-center gap-2">
-              {eleve.nom} {eleve.prenom}
-              <FavoriteStar matricule={eleve.matricule} size="text-2xl" />
-            </span>
-          }
-          description={`${NOM_NIVEAU[eleve.niveau]} · Origine ${eleve.pays}`}
-        />
+        <div className="flex items-center gap-4">
+          <Avatar matricule={eleve.matricule} nom={eleve.nom} prenom={eleve.prenom} size={64} />
+          <PageHeader
+            eyebrow={`${eleve.matricule} · ${nomClasse}`}
+            title={
+              <span className="inline-flex items-center gap-2">
+                {eleve.nom} {eleve.prenom}
+                <FavoriteStar matricule={eleve.matricule} size="text-2xl" />
+              </span>
+            }
+            description={`${NOM_NIVEAU[eleve.niveau]} · Origine ${eleve.pays}`}
+          />
+        </div>
         <div className="text-right">
           <div className="text-[11px] uppercase tracking-wide text-slate">Moyenne générale</div>
           <div className="font-display text-4xl text-ink">

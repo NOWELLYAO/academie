@@ -12,6 +12,7 @@ import {
 import { useAcademyStore } from "@/lib/store/useAcademyStore";
 import PageHeader from "@/components/PageHeader";
 import FavoriteStar from "@/components/FavoriteStar";
+import Avatar from "@/components/Avatar";
 import { NOM_NIVEAU } from "@/lib/data/subjects";
 import { genererAppreciationCourte } from "@/lib/engines/narrative";
 import { qualifierPotentiel } from "@/lib/engines/potential";
@@ -72,15 +73,18 @@ export default function FavorisPage() {
             return (
               <div key={e.matricule} className="border border-line bg-white/60 p-5">
                 <div className="flex items-start justify-between mb-1">
-                  <div>
-                    <Link
-                      href={`/eleves/${e.matricule}`}
-                      className="font-display text-lg text-ink hover:text-gold"
-                    >
-                      {e.nom} {e.prenom}
-                    </Link>
-                    <div className="text-xs text-slate mt-0.5">
-                      {e.matricule} · {nomClasse} · {NOM_NIVEAU[e.niveau]}
+                  <div className="flex items-center gap-3">
+                    <Avatar matricule={e.matricule} nom={e.nom} prenom={e.prenom} size={40} favori />
+                    <div>
+                      <Link
+                        href={`/eleves/${e.matricule}`}
+                        className="font-display text-lg text-ink hover:text-gold"
+                      >
+                        {e.nom} {e.prenom}
+                      </Link>
+                      <div className="text-xs text-slate mt-0.5">
+                        {e.matricule} · {nomClasse} · {NOM_NIVEAU[e.niveau]}
+                      </div>
                     </div>
                   </div>
                   <FavoriteStar matricule={e.matricule} size="text-xl" />
