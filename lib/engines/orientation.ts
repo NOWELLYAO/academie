@@ -113,7 +113,17 @@ export function niveauSuivant(niveau: Niveau): Niveau | null {
  * en Terminale. Les autres niveaux (Seconde, Première) sont évalués sur
  * la seule moyenne annuelle de contrôle continu. */
 export function estNiveauExamen(niveau: Niveau): boolean {
-  return niveau === "3e" || niveau === "TermA" || niveau === "TermC" || niveau === "TermD";
+  return (
+    niveau === "3e" ||
+    niveau === "TermA" ||
+    niveau === "TermC" ||
+    niveau === "TermD" ||
+    niveau === "PrepaScientifique" ||
+    niveau === "PrepaLitteraire" ||
+    niveau === "DUT" ||
+    niveau === "Universite" ||
+    niveau === "EcoleIngenieurs"
+  );
 }
 
 /** Orientation post-Terminale : classe préparatoire scientifique ou

@@ -27,6 +27,7 @@ const LIENS = [
   { href: "/hall-of-fame", label: "Hall of Fame", groupe: "analyse" },
   { href: "/tableau-honneur", label: "Tableau d'honneur", groupe: "analyse" },
   { href: "/finances", label: "💰 Finances", groupe: "analyse" },
+  { href: "/carrieres", label: "💼 Carrières", groupe: "analyse" },
   { href: "/concours", label: "Concours", groupe: "analyse" },
 ];
 

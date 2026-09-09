@@ -12,10 +12,13 @@ import { qualifierPotentiel, qualifierVolatilite } from "@/lib/engines/potential
 import { genererAppreciation } from "@/lib/engines/narrative";
 import { calculerBadges } from "@/lib/engines/badges";
 import { formaterFCFA } from "@/lib/engines/finances";
+import { LIBELLE_RESPONSABILITE } from "@/lib/data/metiers";
+import { calculerBadgesCarriere } from "@/lib/engines/badgesCarriere";
 import { exporterBulletinIndividuel } from "@/lib/export/pdf";
 import FavoriteStar from "@/components/FavoriteStar";
 import Avatar from "@/components/Avatar";
 import FicheNotesComplete from "@/components/FicheNotesComplete";
+import FicheDetailleeParNiveau from "@/components/FicheDetailleeParNiveau";
 
 export default function ElevePage({
   params,
@@ -40,6 +43,7 @@ export default function ElevePage({
   const nomClasse = session.classes.find((c) => c.id === eleve.classeId)?.nom ?? eleve.classeId;
   const appreciation = genererAppreciation(eleve);
   const badges = calculerBadges(eleve);
+  const badgesCarriere = calculerBadgesCarriere(eleve, session.anneeCourante.libelle);
 
   return (
     <div className="p-5 md:p-10 max-w-5xl">
@@ -58,7 +62,7 @@ export default function ElevePage({
                 <FavoriteStar matricule={eleve.matricule} size="text-2xl" />
               </span>
             }
-            description={`${eleve.statut === "diplome" ? "🎓 Diplômé" : eleve.anneePostBac ? `${NOM_NIVEAU[eleve.niveau]} (${eleve.anneePostBac}e année)` : NOM_NIVEAU[eleve.niveau]} · Origine ${eleve.pays}`}
+            description={`${eleve.statut === "retraite" ? "🌅 Retraité(e)" : eleve.statut === "diplome" ? "🎓 Diplômé" : eleve.anneePostBac ? `${NOM_NIVEAU[eleve.niveau]} (${eleve.anneePostBac}e année)` : NOM_NIVEAU[eleve.niveau]} · Origine ${eleve.pays}`}
           />
         </div>
         <div className="text-right">
@@ -129,6 +133,15 @@ export default function ElevePage({
         <FicheNotesComplete eleve={eleve} />
       </div>
 
+      <h2 className="font-display text-lg text-ink mb-1">🗂️ Notes détaillées par niveau</h2>
+      <p className="text-xs text-slate mb-3">
+        Sélectionnez une année : toutes les matières, les trois trimestres, avec le rang exact
+        dans la classe et dans le niveau pour chacune.
+      </p>
+      <div className="mb-10">
+        <FicheDetailleeParNiveau session={session} eleve={eleve} />
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         <div>
           <h2 className="font-display text-lg text-ink mb-3">Évolution</h2>
@@ -195,6 +208,63 @@ export default function ElevePage({
               ))
             )}
           </div>
+
+          {eleve.carriere && (
+            <>
+              <h2 className="font-display text-lg text-ink mt-8 mb-3">💼 Carrière</h2>
+              <div className="border border-gold bg-gold-soft/20 px-4 py-3 mb-3">
+                <div className="font-display text-base text-ink">{eleve.carriere.nom}</div>
+                <div className="text-xs text-slate">
+                  {eleve.carriere.secteur} ·{" "}
+                  {LIBELLE_RESPONSABILITE[eleve.carriere.niveauResponsabilite as 1 | 2 | 3 | 4 | 5]}
+                  {eleve.carriere.typeCarriere === "entrepreneur" && " · Entrepreneur"}
+                </div>
+                <div className="text-sm font-medium text-ink mt-1">
+                  {formaterFCFA(eleve.carriere.salaireMensuel)} / mois
+                </div>
+                {eleve.marie && (
+                  <div className="text-xs text-slate mt-1">
+                    💍 Marié(e) depuis {eleve.anneeMariage}
+                    {eleve.conjointMatricule && (
+                      <>
+                        {" "}
+                        à{" "}
+                        <Link href={`/eleves/${eleve.conjointMatricule}`} className="text-ink hover:text-gold border-b border-gold">
+                          {session.eleves[eleve.conjointMatricule]?.nom} {session.eleves[eleve.conjointMatricule]?.prenom}
+                        </Link>
+                      </>
+                    )}
+                  </div>
+                )}
+                {badgesCarriere.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {badgesCarriere.map((b) => (
+                      <span
+                        key={b.titre}
+                        title={b.description}
+                        className="text-[11px] border border-ink text-ink px-2 py-0.5 bg-paper-dim"
+                      >
+                        {b.icone} {b.titre}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="border border-line bg-white/60 divide-y divide-line">
+                {eleve.carriere.historique.map((h, i) => (
+                  <div key={i} className="px-4 py-2.5 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm text-ink">{h.motif}</p>
+                      <p className="text-[11px] text-slate mt-0.5">{h.annee}</p>
+                    </div>
+                    <span className="text-sm font-medium text-ink shrink-0 tabular-nums">
+                      {formaterFCFA(h.salaireMensuel)}/mois
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

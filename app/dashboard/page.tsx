@@ -97,7 +97,8 @@ export default function DashboardPage() {
             le passage se fait sur la seule moyenne annuelle.
           </p>
           <p>
-            <strong className="text-ink">Après le Bac</strong>, chaque cursus a une durée fixe et se
+            <strong className="text-ink">Après le Bac</strong>, chaque cursus a une durée fixe, passe
+            chaque année sa propre session d&apos;examens (coefficients propres à la filière), et se
             termine toujours par un diplôme — la simulation continue de suivre l&apos;élève chaque année
             jusqu&apos;au bout, ce n&apos;est jamais une impasse :
           </p>

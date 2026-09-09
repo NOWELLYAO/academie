@@ -14,7 +14,7 @@ const ETAPES: { niveaux: Niveau[]; label: string }[] = [
 
 export default function ParcoursCarte({ eleve }: { eleve: Eleve }) {
   const etapeActuelleIdx = ETAPES.findIndex((e) => e.niveaux.includes(eleve.niveau));
-  const diplome = eleve.statut === "diplome";
+  const diplome = eleve.statut === "diplome" || eleve.statut === "retraite";
 
   function libelleEtapeActuelle(): string {
     if (diplome) return `🎓 Diplômé — ${NOM_NIVEAU[eleve.niveau]}`;

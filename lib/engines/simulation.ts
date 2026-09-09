@@ -1,5 +1,7 @@
 import { Classe, Eleve, Niveau, Session } from "../models/types";
 import { genererNoteBrute } from "./potential";
+import { demarrerCarriere, avancerCarriereEleve } from "./carriere";
+import { avancerMariages } from "./mariage";
 import { mulberry32, RNG } from "../utils/random";
 import {
   calculerMoyenneTrimestre,
@@ -267,6 +269,27 @@ export function statutExamenNiveau(session: Session, groupe: GroupeNiveau): Stat
   return "partiel";
 }
 
+/** Même principe pour l'étape Orientation : indique si les élèves d'un
+ * niveau ont déjà leur décision de fin d'année (passage, redoublement,
+ * progression post-bac...) traitée. */
+export function statutOrientationNiveau(session: Session, groupe: GroupeNiveau): StatutNotation {
+  let total = 0;
+  let traites = 0;
+
+  groupe.classes.forEach((classe) => {
+    classe.matricules.forEach((matricule) => {
+      const eleve = session.eleves[matricule];
+      if (!eleve || !estScolarise(eleve.statut)) return;
+      total++;
+      if (eleve.orientationAnneeTraitee === session.anneeCourante.libelle) traites++;
+    });
+  });
+
+  if (traites === 0) return "aucun";
+  if (traites >= total) return "complet";
+  return "partiel";
+}
+
 /** Génère les notes du trimestre en cours pour TOUTES les classes d'un même
  * niveau en un seul clic (ex: les 6 classes de Seconde C d'un coup) — et
  * pour rien d'autre. Idempotent : ne duplique jamais un travail déjà fait. */
@@ -363,11 +386,24 @@ export function simulerTrimestre(session: Session, trimestre: 1 | 2 | 3): void {
 
 /** Moyenne annuelle = moyenne simple des moyennes des 3 trimestres de
  * l'année en cours (et non la seule moyenne du 3e trimestre). */
+/** Moyenne annuelle = moyenne pondérée des 3 trimestres, T1 comptant pour
+ * 1 et T2/T3 comptant chacun pour 2 (les résultats du 2e et du 3e
+ * trimestre pèsent donc davantage que ceux du 1er dans la moyenne
+ * générale annuelle). Si un trimestre manque encore, la pondération
+ * s'ajuste automatiquement sur les trimestres disponibles. */
+const POIDS_TRIMESTRE: Record<number, number> = { 1: 1, 2: 2, 3: 2 };
+
 function moyenneAnnuelleTrimestres(eleve: Eleve, annee: string): number {
   const trimestres = eleve.moyennes.filter((m) => m.annee === annee);
   if (trimestres.length === 0) return 0;
-  const total = trimestres.reduce((acc, m) => acc + m.moyenneGenerale, 0);
-  return Math.round((total / trimestres.length) * 100) / 100;
+  let totalPondere = 0;
+  let totalPoids = 0;
+  trimestres.forEach((m) => {
+    const poids = POIDS_TRIMESTRE[m.trimestre] ?? 1;
+    totalPondere += m.moyenneGenerale * poids;
+    totalPoids += poids;
+  });
+  return totalPoids > 0 ? Math.round((totalPondere / totalPoids) * 100) / 100 : 0;
 }
 
 /** Organise la fin d'année : seules la 3e et la Terminale (A/C/D) sont des
@@ -474,136 +510,189 @@ export function simulerExamen(session: Session): void {
  * y compris pour les élèves déjà en post-bac : chaque cursus post-bac suit
  * désormais exactement le même moteur (notes, mentions, décision de
  * passage) que le secondaire, avec une durée fixe menant à un diplôme. */
-export function simulerOrientation(session: Session): void {
-  Object.values(session.eleves).forEach((eleve) => {
-    if (!estScolarise(eleve.statut)) return;
+/** Traite la décision de fin d'année (mention/bourse, passage,
+ * redoublement, recalage, ou orientation/progression post-bac) pour UN
+ * élève. Idempotent : un élève déjà traité cette année n'est jamais repris
+ * — condition indispensable pour permettre un traitement niveau par
+ * niveau (les niveaux n'ont pas tous le même processus, notamment le
+ * post-bac, qui progresse d'année en année plutôt que de changer de
+ * série). */
+function traiterOrientationEleve(session: Session, eleve: Eleve, rng: RNG): void {
+  if (!estScolarise(eleve.statut)) return;
+  if (eleve.orientationAnneeTraitee === session.anneeCourante.libelle) return;
+  eleve.orientationAnneeTraitee = session.anneeCourante.libelle;
 
-    // Bourse au mérite : versée chaque année où la moyenne annuelle atteint
-    // le seuil, quel que soit le niveau. Le statut "boursier" est acquis
-    // définitivement dès la première fois.
-    const moyenneAnnee = eleve.moyennes[eleve.moyennes.length - 1]?.moyenneGenerale ?? 0;
-    if (moyenneAnnee >= SEUIL_BOURSE_MERITE) {
-      eleve.boursier = true;
+  // Bourse au mérite : versée chaque année où la moyenne annuelle atteint
+  // le seuil, quel que soit le niveau. Le statut "boursier" est acquis
+  // définitivement dès la première fois.
+  const moyenneAnnee = eleve.moyennes[eleve.moyennes.length - 1]?.moyenneGenerale ?? 0;
+  if (moyenneAnnee >= SEUIL_BOURSE_MERITE) {
+    eleve.boursier = true;
+    crediterEleve(
+      eleve,
+      MONTANT_BOURSE_MERITE,
+      `Bourse au mérite — ${session.anneeCourante.libelle}`,
+      session.anneeCourante.libelle
+    );
+  }
+
+  let decision = decisionProgression(eleve, session.anneeCourante.libelle);
+
+  // Un seul redoublement autorisé sur tout le parcours scolaire : au-delà,
+  // c'est un recalage (règle simple et prévisible plutôt qu'un cycle
+  // indéfini de redoublements qui serait illisible).
+  if (decision === "redoublement" && eleve.redoublements >= 1) {
+    decision = "recale";
+  }
+
+  if (decision === "recale") {
+    eleve.statut = "recale";
+    eleve.historiqueOrientation.push({
+      annee: session.anneeCourante.libelle,
+      niveauOrigine: eleve.niveau,
+      niveauDestination: "recale",
+      motif:
+        eleve.redoublements >= 1
+          ? "Nouvel échec après un redoublement — un seul redoublement est autorisé dans le parcours."
+          : "Résultats très insuffisants sur l'année.",
+      scoreDetail: {},
+    });
+    return;
+  }
+
+  if (decision === "redoublement") {
+    eleve.statut = "redoublant";
+    eleve.redoublements += 1;
+    eleve.anneesRedoublees.push(session.anneeCourante.libelle);
+    eleve.historiqueOrientation.push({
+      annee: session.anneeCourante.libelle,
+      niveauOrigine: eleve.niveau,
+      niveauDestination: "redoublement",
+      motif: `Redoublement de ${NOM_NIVEAU[eleve.niveau]} — résultats insuffisants pour passer (1 seul redoublement autorisé au total).`,
+      scoreDetail: {},
+    });
+    return;
+  }
+
+  if (decision === "avertissement") {
+    // Passage accepté mais fragile — on le trace pour rester transparent
+    // sans pour autant bloquer la progression.
+    eleve.historiqueOrientation.push({
+      annee: session.anneeCourante.libelle,
+      niveauOrigine: eleve.niveau,
+      niveauDestination: eleve.niveau,
+      motif: "Passage accordé avec avertissement — résultats fragiles à surveiller.",
+      scoreDetail: {},
+    });
+  }
+
+  // passage (ou avertissement) -> orientation vers le niveau suivant
+  if (estPostBac(eleve.niveau)) {
+    avancerUneAnneePostBac(eleve, session.anneeCourante.libelle, rng);
+    return;
+  }
+
+  if (eleve.niveau === "3e") {
+    const entree = orienterFinDe3e(eleve, session.anneeCourante.libelle);
+    eleve.niveau = entree.niveauDestination as Niveau;
+    eleve.historiqueOrientation.push(entree);
+    eleve.statut = "actif";
+    return;
+  }
+
+  if (eleve.niveau === "2ndeC") {
+    const entree = orienterApresSecondeC(eleve, session.anneeCourante.libelle);
+    eleve.niveau = entree.niveauDestination as Niveau;
+    eleve.historiqueOrientation.push(entree);
+    eleve.statut = "actif";
+    return;
+  }
+
+  const suivant = niveauSuivant(eleve.niveau);
+  if (suivant) {
+    eleve.historiqueOrientation.push({
+      annee: session.anneeCourante.libelle,
+      niveauOrigine: eleve.niveau,
+      niveauDestination: suivant,
+      motif: "Passage en classe supérieure.",
+      scoreDetail: {},
+    });
+    eleve.niveau = suivant;
+    eleve.statut = "actif";
+  } else {
+    // Fin de Terminale -> première entrée dans le post-bac (prépa, DUT, université, école d'ingénieurs)
+    const niveauOrigine = eleve.niveau;
+    const { niveau: destination, motif, excellence } = orienterPostBac(eleve);
+    eleve.admissiblePolytechnique = excellence;
+    eleve.statut = "universite";
+    eleve.niveau = destination;
+    eleve.historiqueOrientation.push({
+      annee: session.anneeCourante.libelle,
+      niveauOrigine,
+      niveauDestination: destination,
+      motif,
+      scoreDetail: {},
+    });
+    if (excellence) {
       crediterEleve(
         eleve,
-        MONTANT_BOURSE_MERITE,
-        `Bourse au mérite — ${session.anneeCourante.libelle}`,
+        MONTANT_ADMISSION_EXCELLENCE,
+        "Bourse d'excellence — admission post-bac",
         session.anneeCourante.libelle
       );
     }
+    eleve.anneePostBac = 1;
+  }
+}
 
-    let decision = decisionProgression(eleve, session.anneeCourante.libelle);
+/** Applique l'orientation de fin d'année pour TOUTE la génération (bouton
+ * global) — passage/redoublement/recalage pour le secondaire, progression
+ * ou diplôme pour le post-bac — puis recompose les classes. Idempotent :
+ * les niveaux déjà traités individuellement ne sont pas repris. */
+export function simulerOrientation(session: Session): void {
+  const rng = rngDeSession(session, `ORIENTATION-${session.anneeCourante.libelle}`);
+  Object.values(session.eleves).forEach((eleve) => traiterOrientationEleve(session, eleve, rng));
 
-    // Un seul redoublement autorisé sur tout le parcours scolaire : au-delà,
-    // c'est un recalage (règle simple et prévisible plutôt qu'un cycle
-    // indéfini de redoublements qui serait illisible).
-    if (decision === "redoublement" && eleve.redoublements >= 1) {
-      decision = "recale";
-    }
-
-    if (decision === "recale") {
-      eleve.statut = "recale";
-      eleve.historiqueOrientation.push({
-        annee: session.anneeCourante.libelle,
-        niveauOrigine: eleve.niveau,
-        niveauDestination: "recale",
-        motif:
-          eleve.redoublements >= 1
-            ? "Nouvel échec après un redoublement — un seul redoublement est autorisé dans le parcours."
-            : "Résultats très insuffisants sur l'année.",
-        scoreDetail: {},
-      });
-      return;
-    }
-
-    if (decision === "redoublement") {
-      eleve.statut = "redoublant";
-      eleve.redoublements += 1;
-      eleve.anneesRedoublees.push(session.anneeCourante.libelle);
-      eleve.historiqueOrientation.push({
-        annee: session.anneeCourante.libelle,
-        niveauOrigine: eleve.niveau,
-        niveauDestination: "redoublement",
-        motif: `Redoublement de ${NOM_NIVEAU[eleve.niveau]} — résultats insuffisants pour passer (1 seul redoublement autorisé au total).`,
-        scoreDetail: {},
-      });
-      return;
-    }
-
-    if (decision === "avertissement") {
-      // Passage accepté mais fragile — on le trace pour rester transparent
-      // sans pour autant bloquer la progression.
-      eleve.historiqueOrientation.push({
-        annee: session.anneeCourante.libelle,
-        niveauOrigine: eleve.niveau,
-        niveauDestination: eleve.niveau,
-        motif: "Passage accordé avec avertissement — résultats fragiles à surveiller.",
-        scoreDetail: {},
-      });
-    }
-
-    // passage (ou avertissement) -> orientation vers le niveau suivant
-    if (estPostBac(eleve.niveau)) {
-      avancerUneAnneePostBac(eleve, session.anneeCourante.libelle);
-      return;
-    }
-
-    if (eleve.niveau === "3e") {
-      const entree = orienterFinDe3e(eleve, session.anneeCourante.libelle);
-      eleve.niveau = entree.niveauDestination as Niveau;
-      eleve.historiqueOrientation.push(entree);
-      eleve.statut = "actif";
-      return;
-    }
-
-    if (eleve.niveau === "2ndeC") {
-      const entree = orienterApresSecondeC(eleve, session.anneeCourante.libelle);
-      eleve.niveau = entree.niveauDestination as Niveau;
-      eleve.historiqueOrientation.push(entree);
-      eleve.statut = "actif";
-      return;
-    }
-
-    const suivant = niveauSuivant(eleve.niveau);
-    if (suivant) {
-      eleve.historiqueOrientation.push({
-        annee: session.anneeCourante.libelle,
-        niveauOrigine: eleve.niveau,
-        niveauDestination: suivant,
-        motif: "Passage en classe supérieure.",
-        scoreDetail: {},
-      });
-      eleve.niveau = suivant;
-      eleve.statut = "actif";
-    } else {
-      // Fin de Terminale -> première entrée dans le post-bac (prépa, DUT, université, école d'ingénieurs)
-      const niveauOrigine = eleve.niveau;
-      const { niveau: destination, motif, excellence } = orienterPostBac(eleve);
-      eleve.admissiblePolytechnique = excellence;
-      eleve.statut = "universite";
-      eleve.niveau = destination;
-      eleve.historiqueOrientation.push({
-        annee: session.anneeCourante.libelle,
-        niveauOrigine,
-        niveauDestination: destination,
-        motif,
-        scoreDetail: {},
-      });
-      if (excellence) {
-        crediterEleve(
-          eleve,
-          MONTANT_ADMISSION_EXCELLENCE,
-          "Bourse d'excellence — admission post-bac",
-          session.anneeCourante.libelle
-        );
-      }
-      eleve.anneePostBac = 1;
+  // Les diplômés déjà en poste évoluent dans leur carrière (promotion,
+  // entrepreneuriat, expatriation, retraite) chaque année, indépendamment
+  // du reste de la promotion.
+  const rngCarriere = rngDeSession(session, `CARRIERE-${session.anneeCourante.libelle}`);
+  Object.values(session.eleves).forEach((eleve) => {
+    if ((eleve.statut === "diplome") && eleve.carriere) {
+      avancerCarriereEleve(eleve, session.anneeCourante.libelle, rngCarriere);
     }
   });
+
+  // Quelques mariages entre anciens élèves de la génération, chaque année.
+  const rngMariage = rngDeSession(session, `MARIAGE-${session.anneeCourante.libelle}`);
+  avancerMariages(session, session.anneeCourante.libelle, rngMariage);
 
   recomposerClasses(session);
   capturerSnapshotAnnee(session);
   session.anneeCourante.etapeCourante = "annee_suivante";
+}
+
+/** Applique l'orientation pour UN SEUL niveau (ex: uniquement la 3e, ou
+ * uniquement l'École d'ingénieurs 1ère année) — bouton dédié par niveau.
+ * Ne recompose pas les classes ni ne fait avancer l'étape globale : c'est
+ * le bouton global qui s'en charge une fois tous les niveaux couverts. */
+export function organiserOrientationPourNiveau(session: Session, groupeCle: string): number {
+  const groupe = listerGroupesNiveau(session).find((g) => g.cle === groupeCle);
+  if (!groupe) return 0;
+
+  const rng = rngDeSession(session, `ORIENTATION-${groupeCle}-${session.anneeCourante.libelle}`);
+  let traites = 0;
+  groupe.classes.forEach((classe) => {
+    classe.matricules.forEach((matricule) => {
+      const eleve = session.eleves[matricule];
+      if (!eleve) return;
+      const dejaFait = eleve.orientationAnneeTraitee === session.anneeCourante.libelle;
+      traiterOrientationEleve(session, eleve, rng);
+      if (!dejaFait) traites++;
+    });
+  });
+
+  return traites;
 }
 
 /** Durée (en années) de chaque cursus post-bac. Une classe préparatoire
@@ -623,7 +712,7 @@ const DUREE_POST_BAC: Partial<Record<Niveau, number>> = {
  * une fois sa décision de passage validée pour l'année (mêmes règles de
  * mention/redoublement que le secondaire) : passage à l'année suivante,
  * transition prépa -> école/université, ou obtention du diplôme final. */
-function avancerUneAnneePostBac(eleve: Eleve, annee: string): void {
+function avancerUneAnneePostBac(eleve: Eleve, annee: string, rng: RNG): void {
   eleve.anneePostBac = (eleve.anneePostBac ?? 1) + 1;
 
   // Admission directe en école d'ingénieurs (excellence au Bac) : cursus
@@ -683,6 +772,7 @@ function avancerUneAnneePostBac(eleve: Eleve, annee: string): void {
     motif: `Diplômé — ${NOM_NIVEAU[eleve.niveau]} (cursus de ${duree} an${duree > 1 ? "s" : ""}).`,
     scoreDetail: {},
   });
+  demarrerCarriere(eleve, rng, annee);
 }
 
 /** Enregistre une photographie de la génération à la fin de l'année qui

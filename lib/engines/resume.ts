@@ -35,13 +35,21 @@ export function construireResumeEtape(
       const nTerm = Object.values(avant.eleves).filter(
         (e) => (e.niveau === "TermA" || e.niveau === "TermC" || e.niveau === "TermD") && enVie(e)
       ).length;
-      const autres = Object.values(avant.eleves).filter(
-        (e) => enVie(e) && e.niveau !== "3e" && !["TermA", "TermC", "TermD"].includes(e.niveau)
+      const nPostBac = Object.values(avant.eleves).filter(
+        (e) => enVie(e) && e.statut === "universite"
+      ).length;
+      const nSansExamen = Object.values(avant.eleves).filter(
+        (e) =>
+          enVie(e) &&
+          e.niveau !== "3e" &&
+          !["TermA", "TermC", "TermD"].includes(e.niveau) &&
+          e.statut !== "universite"
       ).length;
       return (
         `Épreuves de fin d'année : BEPC pour ${n3e} élèves de 3e, Baccalauréat pour ${nTerm} ` +
-        `élèves de Terminale. Les ${autres} autres élèves (Seconde, Première, et tout le cycle ` +
-        `post-bac) n'ont pas d'examen national — leur résultat est la moyenne annuelle de contrôle continu.`
+        `élèves de Terminale, et session d'examens pour ${nPostBac} élèves du post-bac (prépa, ` +
+        `DUT, université, école d'ingénieurs). Les ${nSansExamen} élèves de Seconde/Première ` +
+        `n'ont pas d'examen national — leur résultat est la moyenne annuelle de contrôle continu.`
       );
     }
 

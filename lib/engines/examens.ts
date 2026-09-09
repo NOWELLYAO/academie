@@ -1,4 +1,4 @@
-import { Session } from "../models/types";
+import { Session, Niveau } from "../models/types";
 import { calculerMention, NiveauMention } from "./mentions";
 
 export interface ResultatExamen {
@@ -7,13 +7,25 @@ export interface ResultatExamen {
   prenom: string;
   classeNom: string;
   annee: string;
-  type: "BEPC" | "Bac";
-  serie: string | null; // "C" | "D" | "A" pour le Bac, null pour le BEPC
+  type: string; // "BEPC", "Bac", "Session Prépa scientifique", etc.
+  serie: string | null; // "C" | "D" | "A" pour le Bac uniquement
   points: number;
   pointsMax: number;
   moyenne: number;
   mention: NiveauMention | null;
 }
+
+const TYPE_PAR_NIVEAU: Partial<Record<Niveau, string>> = {
+  "3e": "BEPC",
+  TermA: "Bac",
+  TermC: "Bac",
+  TermD: "Bac",
+  PrepaScientifique: "Session Prépa scientifique",
+  PrepaLitteraire: "Session Prépa littéraire",
+  DUT: "Session DUT/BTS",
+  Universite: "Session Université",
+  EcoleIngenieurs: "Session École d'ingénieurs",
+};
 
 function serieDuNiveau(niveau: string): string | null {
   if (niveau === "TermC") return "C";
@@ -23,8 +35,9 @@ function serieDuNiveau(niveau: string): string | null {
 }
 
 /** Parcourt tout l'historique de la génération pour en extraire chaque
- * résultat d'examen (BEPC ou Bac) jamais passé — y compris les années
- * précédentes, pas seulement le dernier trimestre de chaque élève. */
+ * résultat d'examen ou de session (BEPC, Bac, ou sessions post-bac) jamais
+ * passé — y compris les années précédentes, pas seulement le dernier
+ * trimestre de chaque élève. */
 export function listerResultatsExamens(session: Session): ResultatExamen[] {
   const resultats: ResultatExamen[] = [];
 
@@ -39,8 +52,8 @@ export function listerResultatsExamens(session: Session): ResultatExamen[] {
         prenom: eleve.prenom,
         classeNom: m.classeNom ?? nomClasse,
         annee: m.annee,
-        type: m.pointsExamenMax === 360 ? "BEPC" : "Bac",
-        serie: m.pointsExamenMax === 360 ? null : serieDuNiveau(m.niveau),
+        type: TYPE_PAR_NIVEAU[m.niveau] ?? "Session",
+        serie: serieDuNiveau(m.niveau),
         points: m.pointsExamen ?? 0,
         pointsMax: m.pointsExamenMax,
         moyenne: m.moyenneGenerale,
@@ -54,4 +67,18 @@ export function listerResultatsExamens(session: Session): ResultatExamen[] {
 
 export function anneesDisponibles(resultats: ResultatExamen[]): string[] {
   return Array.from(new Set(resultats.map((r) => r.annee))).sort().reverse();
+}
+
+export function typesDisponibles(resultats: ResultatExamen[]): string[] {
+  const ordre = [
+    "BEPC",
+    "Bac",
+    "Session Prépa scientifique",
+    "Session Prépa littéraire",
+    "Session DUT/BTS",
+    "Session Université",
+    "Session École d'ingénieurs",
+  ];
+  const presents = new Set(resultats.map((r) => r.type));
+  return ordre.filter((t) => presents.has(t));
 }

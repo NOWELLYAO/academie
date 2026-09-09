@@ -7,29 +7,31 @@ import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import Avatar from "@/components/Avatar";
 import RangBadge from "@/components/RangBadge";
-import { listerResultatsExamens, anneesDisponibles } from "@/lib/engines/examens";
+import { listerResultatsExamens, anneesDisponibles, typesDisponibles } from "@/lib/engines/examens";
 import { LIBELLE_MENTION } from "@/lib/engines/mentions";
 
 const SERIES = ["Toutes", "C", "D", "A"];
 
 export default function ExamensPage() {
   const session = useAcademyStore((s) => s.session);
-  const [type, setType] = useState<"BEPC" | "Bac">("Bac");
+  const [type, setType] = useState<string>("Bac");
   const [annee, setAnnee] = useState<string>("");
   const [serie, setSerie] = useState("Toutes");
 
   const tousResultats = useMemo(() => (session ? listerResultatsExamens(session) : []), [session]);
   const annees = useMemo(() => anneesDisponibles(tousResultats), [tousResultats]);
+  const types = useMemo(() => typesDisponibles(tousResultats), [tousResultats]);
   const anneeActive = annee || annees[0] || "";
+  const typeActif = types.includes(type) ? type : types[0] ?? "";
 
   const resultats = useMemo(() => {
     return tousResultats.filter((r) => {
-      if (r.type !== type) return false;
+      if (r.type !== typeActif) return false;
       if (anneeActive && r.annee !== anneeActive) return false;
-      if (type === "Bac" && serie !== "Toutes" && r.serie !== serie) return false;
+      if (typeActif === "Bac" && serie !== "Toutes" && r.serie !== serie) return false;
       return true;
     });
-  }, [tousResultats, type, anneeActive, serie]);
+  }, [tousResultats, typeActif, anneeActive, serie]);
 
   if (!session) {
     return (
@@ -63,7 +65,7 @@ export default function ExamensPage() {
   const moyennePoints = nbCandidats
     ? resultats.reduce((a, r) => a + r.points, 0) / nbCandidats
     : 0;
-  const pointsMax = resultats[0]?.pointsMax ?? (type === "BEPC" ? 360 : 400);
+  const pointsMax = resultats[0]?.pointsMax ?? 400;
   const meilleur = resultats[0];
 
   const parMention = resultats.reduce<Record<string, number>>((acc, r) => {
@@ -77,23 +79,23 @@ export default function ExamensPage() {
       <PageHeader
         eyebrow="📊 KPIs d'examen"
         title="Examens"
-        description="Résultats et meilleurs élèves au BEPC et au Baccalauréat, année par année."
+        description="Résultats et meilleurs élèves au BEPC, au Baccalauréat et aux sessions post-bac, année par année."
       />
 
       <div className="flex gap-3 mb-8 flex-wrap items-center">
-        <div className="flex border border-line bg-white/60">
-          <button
-            onClick={() => { setType("BEPC"); setSerie("Toutes"); }}
-            className={`px-4 py-2 text-sm ${type === "BEPC" ? "bg-ink text-paper" : "text-slate hover:bg-paper-dim"}`}
-          >
-            BEPC (3e)
-          </button>
-          <button
-            onClick={() => setType("Bac")}
-            className={`px-4 py-2 text-sm ${type === "Bac" ? "bg-ink text-paper" : "text-slate hover:bg-paper-dim"}`}
-          >
-            Baccalauréat
-          </button>
+        <div className="flex border border-line bg-white/60 flex-wrap">
+          {types.map((t) => (
+            <button
+              key={t}
+              onClick={() => {
+                setType(t);
+                setSerie("Toutes");
+              }}
+              className={`px-3 py-2 text-sm whitespace-nowrap ${typeActif === t ? "bg-ink text-paper" : "text-slate hover:bg-paper-dim"}`}
+            >
+              {t}
+            </button>
+          ))}
         </div>
 
         <select
@@ -108,7 +110,7 @@ export default function ExamensPage() {
           ))}
         </select>
 
-        {type === "Bac" && (
+        {typeActif === "Bac" && (
           <div className="flex border border-line bg-white/60">
             {SERIES.map((s) => (
               <button
@@ -164,7 +166,7 @@ export default function ExamensPage() {
             <Avatar matricule={meilleur.matricule} nom={meilleur.nom} prenom={meilleur.prenom} size={44} />
             <div>
               <div className="text-[11px] uppercase tracking-wide text-slate">
-                🏆 Major — {type} {anneeActive} {type === "Bac" && serie !== "Toutes" ? `(série ${serie})` : ""}
+                🏆 Major — {typeActif} {anneeActive} {typeActif === "Bac" && serie !== "Toutes" ? `(série ${serie})` : ""}
               </div>
               <Link
                 href={`/eleves/${meilleur.matricule}`}
@@ -187,7 +189,7 @@ export default function ExamensPage() {
                   <th></th>
                   <th>Élève</th>
                   <th>Classe</th>
-                  {type === "Bac" && <th>Série</th>}
+                  {typeActif === "Bac" && <th>Série</th>}
                   <th>Points</th>
                   <th>Moyenne /20</th>
                   <th>Mention</th>
@@ -211,7 +213,7 @@ export default function ExamensPage() {
                       </Link>
                     </td>
                     <td className="text-slate">{r.classeNom}</td>
-                    {type === "Bac" && <td className="text-slate">{r.serie ?? "—"}</td>}
+                    {typeActif === "Bac" && <td className="text-slate">{r.serie ?? "—"}</td>}
                     <td className="font-medium tabular-nums">
                       {r.points}/{r.pointsMax}
                     </td>

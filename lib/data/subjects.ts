@@ -7,7 +7,7 @@ export const MATIERES: Matiere[] = [
     coefficientsParNiveau: {
       "3e": 4, "2ndeC": 5, "2ndeA": 2, "1ereC": 6, "1ereD": 5, "1ereA": 1,
       TermC: 7, TermD: 5, TermA: 2,
-      PrepaScientifique: 6, DUT: 3, Universite: 2, EcoleIngenieurs: 5,
+      PrepaScientifique: 6, DUT: 3, Universite: 3, EcoleIngenieurs: 6,
     },
   },
   {
@@ -15,14 +15,14 @@ export const MATIERES: Matiere[] = [
     nom: "Physique",
     coefficientsParNiveau: {
       "3e": 3, "2ndeC": 5, "1ereC": 6, "1ereD": 4, TermC: 6, TermD: 4,
-      PrepaScientifique: 5, DUT: 2, EcoleIngenieurs: 4,
+      PrepaScientifique: 5, DUT: 2, EcoleIngenieurs: 5,
     },
   },
   {
     key: "svt",
     nom: "SVT",
     coefficientsParNiveau: {
-      "3e": 3, "2ndeC": 2, "1ereD": 6, TermD: 7, Universite: 2,
+      "3e": 3, "2ndeC": 2, "1ereD": 6, TermD: 7, Universite: 3,
     },
   },
   {
@@ -31,7 +31,7 @@ export const MATIERES: Matiere[] = [
     coefficientsParNiveau: {
       "3e": 4, "2ndeC": 3, "2ndeA": 4, "1ereC": 2, "1ereD": 2, "1ereA": 4,
       TermC: 2, TermD: 2, TermA: 6,
-      PrepaLitteraire: 4, Universite: 2,
+      PrepaLitteraire: 5, Universite: 3,
     },
   },
   {
@@ -40,7 +40,7 @@ export const MATIERES: Matiere[] = [
     coefficientsParNiveau: {
       "3e": 2, "2ndeC": 2, "2ndeA": 3, "1ereC": 2, "1ereD": 2, "1ereA": 3,
       TermC: 2, TermD: 1, TermA: 5,
-      PrepaScientifique: 1, PrepaLitteraire: 3, DUT: 2, Universite: 2, EcoleIngenieurs: 2,
+      PrepaScientifique: 2, PrepaLitteraire: 4, DUT: 1, Universite: 2, EcoleIngenieurs: 1,
     },
   },
   {
@@ -48,7 +48,7 @@ export const MATIERES: Matiere[] = [
     nom: "Informatique",
     coefficientsParNiveau: {
       "3e": 2, "2ndeC": 2, "1ereC": 3, "1ereD": 1, TermC: 3, TermD: 1,
-      PrepaScientifique: 2, DUT: 4, Universite: 2, EcoleIngenieurs: 5,
+      PrepaScientifique: 2, DUT: 4, Universite: 2, EcoleIngenieurs: 3,
     },
   },
   {
@@ -56,7 +56,7 @@ export const MATIERES: Matiere[] = [
     nom: "Philosophie",
     coefficientsParNiveau: {
       "2ndeA": 5, "1ereA": 5, TermA: 7,
-      PrepaLitteraire: 4, Universite: 1,
+      PrepaLitteraire: 6, Universite: 2,
     },
   },
 ];
@@ -93,6 +93,7 @@ export const LIBELLE_STATUT: Record<string, string> = {
   recale: "Recalé — sorti du parcours",
   diplome: "Diplômé",
   universite: "Post-bac en cours",
+  retraite: "Retraité",
 };
 
 /** Niveaux considérés comme "post-bac" — ont leurs propres classes, matières

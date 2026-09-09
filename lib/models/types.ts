@@ -47,7 +47,8 @@ export type Statut =
   | "redoublant"
   | "recale"
   | "diplome"
-  | "universite";
+  | "universite"
+  | "retraite";
 
 export type SubjectKey =
   | "mathematiques"
@@ -164,6 +165,11 @@ export interface Eleve {
   boursier: boolean;
   historiqueFinancier: TransactionFinanciere[];
   anneePostBac?: number; // année en cours dans le cursus post-bac actuel (1, 2, 3...)
+  orientationAnneeTraitee?: string; // année déjà traitée à l'étape Orientation (idempotence)
+  carriere?: Carriere;
+  marie?: boolean;
+  conjointMatricule?: string;
+  anneeMariage?: string;
 }
 
 export interface Classe {
@@ -203,6 +209,29 @@ export interface AnneeScolaireInfo {
     | "examen"
     | "orientation"
     | "annee_suivante";
+}
+
+export interface EtapeCarriere {
+  annee: string;
+  metierId: string;
+  nom: string;
+  secteur: string;
+  niveauResponsabilite: number;
+  salaireMensuel: number;
+  motif: string;
+}
+
+export interface Carriere {
+  metierId: string;
+  nom: string;
+  secteur: string;
+  niveauResponsabilite: number;
+  salaireMensuel: number;
+  anneeDebut: string;
+  historique: EtapeCarriere[];
+  typeCarriere: "salarie" | "entrepreneur";
+  statutEntreprise?: "en_activite" | "faillite" | "succes";
+  paysExpatriation?: string;
 }
 
 export interface TransactionFinanciere {

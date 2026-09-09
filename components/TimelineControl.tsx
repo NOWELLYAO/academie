@@ -6,6 +6,7 @@ import {
   listerGroupesNiveau,
   statutNotationNiveau,
   statutExamenNiveau,
+  statutOrientationNiveau,
 } from "@/lib/engines/simulation";
 
 const ETAPES = [
@@ -29,7 +30,12 @@ const LIBELLE_ACTION: Record<string, string> = {
 function libelleEpreuve(libelleNiveau: string): string {
   if (libelleNiveau === "3e") return "BEPC";
   if (libelleNiveau === "Terminale") return "Bac";
-  return "Consolidation";
+  if (libelleNiveau === "Seconde" || libelleNiveau === "1ère") return "Consolidation";
+  return "Session"; // post-bac : session d'examens propre à chaque filière
+}
+
+function libelleOrientation(estPostBac: boolean): string {
+  return estPostBac ? "Faire progresser" : "Orienter";
 }
 
 export default function TimelineControl() {
@@ -38,6 +44,7 @@ export default function TimelineControl() {
   const dernierResume = useAcademyStore((s) => s.dernierResume);
   const genererNotesPourNiveau = useAcademyStore((s) => s.genererNotesPourNiveau);
   const organiserExamenPourNiveau = useAcademyStore((s) => s.organiserExamenPourNiveau);
+  const organiserOrientationPourNiveau = useAcademyStore((s) => s.organiserOrientationPourNiveau);
   const [dernierClic, setDernierClic] = useState<string | null>(null);
 
   const groupes = useMemo(() => (session ? listerGroupesNiveau(session) : []), [session]);
@@ -48,6 +55,7 @@ export default function TimelineControl() {
   const libelleActuel = ETAPES[idxActuel]?.label ?? etapeActuelle;
   const surTrimestre = etapeActuelle === "T1" || etapeActuelle === "T2" || etapeActuelle === "T3";
   const surExamen = etapeActuelle === "examen";
+  const surOrientation = etapeActuelle === "orientation";
 
   function generer(cle: string) {
     genererNotesPourNiveau(cle);
@@ -56,6 +64,11 @@ export default function TimelineControl() {
 
   function examiner(cle: string) {
     organiserExamenPourNiveau(cle);
+    setDernierClic(cle);
+  }
+
+  function orienter(cle: string) {
+    organiserOrientationPourNiveau(cle);
     setDernierClic(cle);
   }
 
@@ -135,7 +148,8 @@ export default function TimelineControl() {
       {surExamen && groupes.length > 0 && (
         <div className="mt-4 pt-4 border-t border-line">
           <div className="text-[11px] uppercase tracking-wide text-slate mb-2">
-            Accès rapide — BEPC pour la 3e, Bac pour la Terminale, consolidation annuelle pour les autres
+            Accès rapide — BEPC pour la 3e, Bac pour la Terminale, session d&apos;examens propre à
+            chaque filière post-bac, consolidation annuelle pour la Seconde et la Première
           </div>
           <div className="flex flex-wrap gap-2">
             {groupes.map((g) => {
@@ -156,6 +170,38 @@ export default function TimelineControl() {
                 >
                   {statut === "complet" ? "✓ " : ""}
                   {libelleEpreuve(g.libelle)} — {g.libelle}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {surOrientation && groupes.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-line">
+          <div className="text-[11px] uppercase tracking-wide text-slate mb-2">
+            Accès rapide — passage/redoublement pour le secondaire, progression d&apos;année pour le
+            post-bac (processus différents par niveau)
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {groupes.map((g) => {
+              const statut = statutOrientationNiveau(session, g);
+              const vientDetreClique = dernierClic === g.cle;
+              return (
+                <button
+                  key={g.cle}
+                  onClick={() => orienter(g.cle)}
+                  title={`${g.classes.length} classe${g.classes.length > 1 ? "s" : ""} · ${g.nbEleves} élèves`}
+                  className={`text-xs px-3 py-1.5 border transition-colors ${
+                    statut === "complet"
+                      ? "border-forest text-forest bg-forest-soft/30"
+                      : statut === "partiel"
+                      ? "border-gold text-ink bg-gold-soft/30"
+                      : "border-line text-slate hover:border-ink hover:text-ink"
+                  } ${vientDetreClique ? "ring-1 ring-gold" : ""}`}
+                >
+                  {statut === "complet" ? "✓ " : ""}
+                  {libelleOrientation(g.estPostBac)} — {g.libelle}
                 </button>
               );
             })}
