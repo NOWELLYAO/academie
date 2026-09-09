@@ -14,7 +14,7 @@ import {
 import { mulberry32, newSeed } from "../utils/random";
 import { construireResumeEtape } from "../engines/resume";
 import { scoreDuDomaine } from "../engines/domaines";
-import { crediterEleve, MONTANTS_CONCOURS } from "../engines/finances";
+import { crediterEleve, MONTANTS_CONCOURS, MONTANT_ADMISSION_EXCELLENCE } from "../engines/finances";
 import { v4 as uuid } from "uuid";
 
 interface AcademyState {
@@ -38,7 +38,8 @@ interface AcademyState {
     nom: string,
     domaine: "scientifique" | "litteraire" | "technologique" | "naturaliste" | "generale",
     niveaux: string[] | null,
-    niveauLibelle: string
+    niveauLibelle: string,
+    prestige?: boolean
   ) => void;
   genererNotesPourNiveau: (groupeCle: string) => number;
 }
@@ -189,14 +190,20 @@ export const useAcademyStore = create<AcademyState>()(
         set({ session: clone });
       },
 
-      lancerConcours: (nom, domaine, niveaux, niveauLibelle) => {
+      lancerConcours: (nom, domaine, niveaux, niveauLibelle, prestige) => {
         const { session } = get();
         if (!session) return;
         const clone: Session = JSON.parse(JSON.stringify(session));
 
+        // Le Concours X / Polytechnique est réservé aux séries scientifiques
+        // (prépa MPSI, jamais série A) — imposé ici quel que soit le filtre
+        // de niveau choisi dans l'interface, pour ne jamais laisser un profil
+        // littéraire y concourir ou le remporter.
+        const niveauxEffectifs = prestige ? ["PrepaScientifique"] : niveaux;
+
         const eligibles = Object.values(clone.eleves).filter((e) => {
           if (e.statut !== "actif" && e.statut !== "redoublant" && e.statut !== "universite") return false;
-          if (niveaux && !niveaux.includes(e.niveau)) return false;
+          if (niveauxEffectifs && !niveauxEffectifs.includes(e.niveau)) return false;
           return true;
         });
 
@@ -231,6 +238,22 @@ export const useAcademyStore = create<AcademyState>()(
             if (eleve) crediterEleve(eleve, montant, `${nom} — ${p.rang}${p.rang === 1 ? "er" : "e"} place`, clone.anneeCourante.libelle);
           }
         });
+
+        // Le lauréat d'un concours prestigieux (Concours X / Polytechnique)
+        // obtient en plus le statut d'admission d'excellence et une bourse
+        // spéciale, comme une admission directe en école d'ingénieurs.
+        if (prestige && classement[0]) {
+          const laureat = clone.eleves[classement[0].matricule];
+          if (laureat) {
+            laureat.admissiblePolytechnique = true;
+            crediterEleve(
+              laureat,
+              MONTANT_ADMISSION_EXCELLENCE,
+              `${nom} — Lauréat`,
+              clone.anneeCourante.libelle
+            );
+          }
+        }
 
         set({ session: clone });
       },
