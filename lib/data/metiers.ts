@@ -36,6 +36,20 @@ export const SECTEURS = [
   "Commerce & Marketing",
 ];
 
+export const ICONE_SECTEUR: Record<string, string> = {
+  "Banque & Finance": "🏦",
+  "Pétrole & Énergie": "🛢️",
+  "BTP & Construction": "🏗️",
+  Santé: "🏥",
+  "Technologie & Informatique": "💻",
+  "Droit & Justice": "⚖️",
+  Éducation: "📚",
+  "Administration publique": "🏛️",
+  "Agriculture & Agro-industrie": "🌾",
+  "Commerce & Marketing": "🛍️",
+  International: "🌍",
+};
+
 export const METIERS: Metier[] = [
   // Banque & Finance (scientifique dominant : maths/logique)
   { id: "banque-1", nom: "Agent de guichet", secteur: "Banque & Finance", niveauResponsabilite: 1, salaireMin: 80000, salaireMax: 120000, domaine: "generale", filiere: "generaliste" },

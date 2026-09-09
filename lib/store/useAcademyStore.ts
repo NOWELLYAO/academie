@@ -88,7 +88,12 @@ function calculerBilan(session: Session) {
     passages: eleves.filter((e) => e.statut === "actif" && e.redoublements === 0).length,
     redoublements: eleves.filter((e) => e.redoublements > 0).length,
     recales: eleves.filter((e) => e.statut === "recale").length,
-    diplomes: eleves.filter((e) => e.statut === "diplome").length,
+    // "Diplômés" = tout élève ayant un jour obtenu son diplôme post-bac,
+    // qu'il soit encore en poste ou déjà retraité — jamais un chiffre qui
+    // diminue avec le temps (ce serait comme si la retraite effaçait le
+    // diplôme).
+    diplomes: eleves.filter((e) => e.statut === "diplome" || e.statut === "retraite").length,
+    retraites: eleves.filter((e) => e.statut === "retraite").length,
     enPostBac: eleves.filter((e) => e.statut === "universite").length,
     prepaScientifique: eleves.filter((e) => e.niveau === "PrepaScientifique").length,
     prepaLitteraire: eleves.filter((e) => e.niveau === "PrepaLitteraire").length,

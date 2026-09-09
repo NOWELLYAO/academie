@@ -60,7 +60,8 @@ export default function DashboardPage() {
 
   const recales = eleves.filter((e) => e.statut === "recale").length;
   const enPostBac = eleves.filter((e) => e.statut === "universite").length;
-  const diplomes = eleves.filter((e) => e.statut === "diplome").length;
+  const diplomes = eleves.filter((e) => e.statut === "diplome" || e.statut === "retraite").length;
+  const retraites = eleves.filter((e) => e.statut === "retraite").length;
 
   return (
     <div className="p-5 md:p-10 max-w-6xl">
@@ -144,7 +145,7 @@ export default function DashboardPage() {
         />
         <StatCard label="Recalés" value={recales} accent="burgundy" />
         <StatCard label="En poursuite post-bac" value={enPostBac} accent="forest" sub="Prépa, DUT, université, école" />
-        <StatCard label="Diplômés" value={diplomes} accent="gold" sub="Cursus post-bac terminé" />
+        <StatCard label="Diplômés" value={diplomes} accent="gold" sub={`dont ${retraites} retraité(e)s`} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

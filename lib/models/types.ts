@@ -274,6 +274,7 @@ export interface BilanGeneration {
   redoublements: number;
   recales: number;
   diplomes: number;
+  retraites: number;
   enPostBac: number;
   prepaScientifique: number;
   prepaLitteraire: number;

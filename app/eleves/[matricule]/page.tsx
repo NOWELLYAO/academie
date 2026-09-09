@@ -12,7 +12,7 @@ import { qualifierPotentiel, qualifierVolatilite } from "@/lib/engines/potential
 import { genererAppreciation } from "@/lib/engines/narrative";
 import { calculerBadges } from "@/lib/engines/badges";
 import { formaterFCFA } from "@/lib/engines/finances";
-import { LIBELLE_RESPONSABILITE } from "@/lib/data/metiers";
+import { LIBELLE_RESPONSABILITE, ICONE_SECTEUR } from "@/lib/data/metiers";
 import { calculerBadgesCarriere } from "@/lib/engines/badgesCarriere";
 import { exporterBulletinIndividuel } from "@/lib/export/pdf";
 import FavoriteStar from "@/components/FavoriteStar";
@@ -213,7 +213,9 @@ export default function ElevePage({
             <>
               <h2 className="font-display text-lg text-ink mt-8 mb-3">💼 Carrière</h2>
               <div className="border border-gold bg-gold-soft/20 px-4 py-3 mb-3">
-                <div className="font-display text-base text-ink">{eleve.carriere.nom}</div>
+                <div className="font-display text-base text-ink">
+                  {ICONE_SECTEUR[eleve.carriere.secteur] ?? ""} {eleve.carriere.nom}
+                </div>
                 <div className="text-xs text-slate">
                   {eleve.carriere.secteur} ·{" "}
                   {LIBELLE_RESPONSABILITE[eleve.carriere.niveauResponsabilite as 1 | 2 | 3 | 4 | 5]}

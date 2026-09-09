@@ -6,7 +6,7 @@ import { useAcademyStore } from "@/lib/store/useAcademyStore";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import Avatar from "@/components/Avatar";
-import { LIBELLE_RESPONSABILITE, SECTEURS, NiveauResponsabilite } from "@/lib/data/metiers";
+import { LIBELLE_RESPONSABILITE, SECTEURS, NiveauResponsabilite, ICONE_SECTEUR } from "@/lib/data/metiers";
 import { formaterFCFA } from "@/lib/engines/finances";
 
 const TYPES_CARRIERE = [
@@ -114,7 +114,7 @@ export default function CarrieresPage() {
           <option value="Tous">Tous les secteurs</option>
           {SECTEURS.map((s) => (
             <option key={s} value={s}>
-              {s}
+              {ICONE_SECTEUR[s]} {s}
             </option>
           ))}
         </select>
@@ -177,7 +177,9 @@ export default function CarrieresPage() {
                       {e.nom} {e.prenom}
                     </Link>
                   </td>
-                  <td className="font-medium">{e.carriere!.nom}</td>
+                  <td className="font-medium">
+                    {ICONE_SECTEUR[e.carriere!.secteur] ?? ""} {e.carriere!.nom}
+                  </td>
                   <td className="text-slate">{e.carriere!.secteur}</td>
                   <td className="text-xs text-slate whitespace-nowrap">
                     {e.statut === "retraite"

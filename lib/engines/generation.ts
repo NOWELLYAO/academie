@@ -136,8 +136,8 @@ export function genererSession(
   const eleves: Record<string, Eleve> = {};
   const identitesUtilisees = new Set<string>();
 
-  LETTRES_CLASSES.forEach((lettre) => {
-    const classeId = `3e-${lettre}`;
+  LETTRES_CLASSES.forEach((lettre, index) => {
+    const classeId = `3e-${index + 1}`;
     const matricules: string[] = [];
 
     for (let i = 1; i <= ELEVES_PAR_CLASSE; i++) {
@@ -175,7 +175,7 @@ export function genererSession(
 
     classes.push({
       id: classeId,
-      nom: `3e ${lettre}`,
+      nom: `3e ${index + 1}`,
       niveau: "3e",
       matricules,
       annee: anneeDepart,

@@ -24,12 +24,21 @@ const LIENS = [
   { href: "/orientation", label: "Orientation", groupe: "analyse" },
   { href: "/examens", label: "📊 Examens", groupe: "analyse" },
   { href: "/statistiques", label: "Statistiques", groupe: "analyse" },
-  { href: "/hall-of-fame", label: "Hall of Fame", groupe: "analyse" },
-  { href: "/tableau-honneur", label: "Tableau d'honneur", groupe: "analyse" },
-  { href: "/finances", label: "💰 Finances", groupe: "analyse" },
-  { href: "/carrieres", label: "💼 Carrières", groupe: "analyse" },
-  { href: "/concours", label: "Concours", groupe: "analyse" },
+  { href: "/hall-of-fame", label: "Hall of Fame", groupe: "distinctions" },
+  { href: "/tableau-honneur", label: "Tableau d'honneur", groupe: "distinctions" },
+  { href: "/concours", label: "Concours", groupe: "distinctions" },
+  { href: "/carrieres", label: "💼 Carrières", groupe: "vieactive" },
+  { href: "/finances", label: "💰 Finances", groupe: "vieactive" },
 ];
+
+const GROUPES_ORDRE = ["principal", "gestion", "analyse", "distinctions", "vieactive"];
+const LIBELLE_GROUPE: Record<string, string> = {
+  principal: "",
+  gestion: "Gestion",
+  analyse: "Analyse",
+  distinctions: "Distinctions",
+  vieactive: "Vie active",
+};
 
 function libelleEtape(etape: string): string {
   const map: Record<string, string> = {
@@ -58,10 +67,10 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       <nav className="flex-1 px-3 py-5 space-y-6 overflow-y-auto scrollbar-thin">
-        {["principal", "gestion", "analyse"].map((groupe) => (
+        {GROUPES_ORDRE.map((groupe) => (
           <div key={groupe}>
             <div className="px-3 mb-1 text-[10px] uppercase tracking-wide text-slate-300/60">
-              {groupe === "principal" ? "" : groupe === "gestion" ? "Gestion" : "Analyse"}
+              {LIBELLE_GROUPE[groupe]}
             </div>
             <ul className="space-y-0.5">
               {LIENS.filter((l) => l.groupe === groupe).map((lien) => {
