@@ -135,25 +135,86 @@ function recalculerMoyenneTrimestreEleve(
 /** Génère les notes du trimestre en cours pour UNE SEULE classe (bouton
  * dédié par niveau/classe, y compris post-bac) et recalcule les moyennes
  * des élèves concernés. Ne touche à aucune autre classe. */
-export function genererNotesPourClasse(session: Session, classeId: string): number {
-  const classe = session.classes.find((c) => c.id === classeId);
-  if (!classe) return 0;
-  const trimestre = session.anneeCourante.trimestreCourant;
-  const rng = rngDeSession(session, `CLASSE-${classeId}-T${trimestre}-${session.anneeCourante.libelle}`);
+/** Clé de regroupement par "niveau" au sens où l'utilisateur l'entend : un
+ * niveau du secondaire (ex: "Seconde C", qui peut compter plusieurs
+ * classes C1, C2...) ou une promotion post-bac précise (ex: "École
+ * d'ingénieurs — 1ère année", jamais mélangée avec la 3e année). */
+export function cleNiveauEleve(eleve: Eleve): string {
+  return estPostBac(eleve.niveau) ? `${eleve.niveau}::${eleve.anneePostBac ?? 1}` : eleve.niveau;
+}
 
-  const matieresGenerees = genererEvaluationsClasseTrimestre(session, classe, trimestre, rng);
+export interface GroupeNiveau {
+  cle: string;
+  niveau: Niveau;
+  anneePostBac?: number;
+  libelle: string;
+  classes: Classe[];
+  nbEleves: number;
+}
 
-  classe.matricules.forEach((matricule) => {
-    const eleve = session.eleves[matricule];
-    if (eleve) recalculerMoyenneTrimestreEleve(session, eleve, trimestre);
+/** Liste tous les groupes de niveau actuellement scolarisés, chacun avec
+ * ses classes rattachées — c'est cette liste qui alimente les boutons "par
+ * niveau" (et non par classe) de la page Notes par niveau. */
+export function listerGroupesNiveau(session: Session): GroupeNiveau[] {
+  const groupes = new Map<string, GroupeNiveau>();
+
+  session.classes.forEach((classe) => {
+    const eleveRef = session.eleves[classe.matricules[0]];
+    if (!eleveRef) return;
+    const cle = cleNiveauEleve(eleveRef);
+
+    if (!groupes.has(cle)) {
+      const anneePostBac = estPostBac(eleveRef.niveau) ? eleveRef.anneePostBac ?? 1 : undefined;
+      const libelle = anneePostBac
+        ? `${NOM_NIVEAU[eleveRef.niveau]} — ${anneePostBac === 1 ? "1ère" : `${anneePostBac}e`} année`
+        : NOM_NIVEAU[eleveRef.niveau];
+      groupes.set(cle, {
+        cle,
+        niveau: eleveRef.niveau,
+        anneePostBac,
+        libelle,
+        classes: [],
+        nbEleves: 0,
+      });
+    }
+    const groupe = groupes.get(cle)!;
+    groupe.classes.push(classe);
+    groupe.nbEleves += classe.matricules.length;
   });
 
-  // Reclassement (au sein de la classe et de la génération) pour rester cohérent
-  const classementClasse = classerClasse(session, classe.id);
-  classementClasse.forEach((entree) => {
-    const eleve = session.eleves[entree.matricule];
-    const derniere = eleve?.moyennes[eleve.moyennes.length - 1];
-    if (derniere && derniere.trimestre === trimestre) derniere.rangClasse = entree.rang;
+  return Array.from(groupes.values()).sort((a, b) => a.libelle.localeCompare(b.libelle));
+}
+
+/** Génère les notes du trimestre en cours pour TOUTES les classes d'un même
+ * niveau en un seul clic (ex: les 6 classes de Seconde C d'un coup) — et
+ * pour rien d'autre. Idempotent : ne duplique jamais un travail déjà fait. */
+export function genererNotesPourNiveau(session: Session, groupeCle: string): number {
+  const groupe = listerGroupesNiveau(session).find((g) => g.cle === groupeCle);
+  if (!groupe) return 0;
+
+  const trimestre = session.anneeCourante.trimestreCourant;
+  const rng = rngDeSession(
+    session,
+    `NIVEAU-${groupeCle}-T${trimestre}-${session.anneeCourante.libelle}`
+  );
+
+  let matieresGenerees = 0;
+  groupe.classes.forEach((classe) => {
+    matieresGenerees += genererEvaluationsClasseTrimestre(session, classe, trimestre, rng);
+    classe.matricules.forEach((matricule) => {
+      const eleve = session.eleves[matricule];
+      if (eleve) recalculerMoyenneTrimestreEleve(session, eleve, trimestre);
+    });
+  });
+
+  // Reclassement (au sein de chaque classe et de la génération) pour rester cohérent
+  groupe.classes.forEach((classe) => {
+    const classementClasse = classerClasse(session, classe.id);
+    classementClasse.forEach((entree) => {
+      const eleve = session.eleves[entree.matricule];
+      const derniere = eleve?.moyennes[eleve.moyennes.length - 1];
+      if (derniere && derniere.trimestre === trimestre) derniere.rangClasse = entree.rang;
+    });
   });
 
   const classementGeneration = classerGeneration(session);
@@ -532,7 +593,7 @@ function recomposerClasses(session: Session): void {
   );
 
   function cleGroupe(e: Eleve): string {
-    return estPostBac(e.niveau) ? `${e.niveau}::${e.anneePostBac ?? 1}` : e.niveau;
+    return cleNiveauEleve(e);
   }
 
   const groupes = new Map<string, Eleve[]>();

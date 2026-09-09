@@ -12,6 +12,7 @@ const LIENS = [
   { href: "/classes", label: "Classes", groupe: "gestion" },
   { href: "/eleves", label: "Élèves", groupe: "gestion" },
   { href: "/notes", label: "Notes", groupe: "gestion" },
+  { href: "/notes-par-niveau", label: "🎯 Notes par niveau", groupe: "gestion" },
   { href: "/resultats", label: "Résultats", groupe: "gestion" },
   { href: "/bulletin", label: "Bulletin complet", groupe: "gestion" },
   { href: "/exports", label: "Fiches PDF / Excel", groupe: "gestion" },
