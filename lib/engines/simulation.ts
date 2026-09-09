@@ -1,8 +1,10 @@
 import { Classe, Eleve, Niveau, Session } from "../models/types";
 import { genererNoteBrute } from "./potential";
 import { demarrerCarriere, avancerCarriereEleve } from "./carriere";
+import { avancerPatrimoineEleve } from "./patrimoine";
 import { avancerMariages } from "./mariage";
-import { mulberry32, RNG } from "../utils/random";
+import { choisirSpecialiteIngenieur } from "../data/specialitesIngenieur";
+import { mulberry32, RNG, clamp } from "../utils/random";
 import {
   calculerMoyenneTrimestre,
   creerEvaluation,
@@ -625,7 +627,8 @@ function traiterOrientationEleve(session: Session, eleve: Eleve, rng: RNG): void
   } else {
     // Fin de Terminale -> première entrée dans le post-bac (prépa, DUT, université, école d'ingénieurs)
     const niveauOrigine = eleve.niveau;
-    const { niveau: destination, motif, excellence } = orienterPostBac(eleve);
+    eleve.serieBac = eleve.niveau === "TermC" ? "C" : eleve.niveau === "TermD" ? "D" : "A";
+    const { niveau: destination, motif, excellence } = orienterPostBac(eleve, rng);
     eleve.admissiblePolytechnique = excellence;
     eleve.statut = "universite";
     eleve.niveau = destination;
@@ -643,6 +646,7 @@ function traiterOrientationEleve(session: Session, eleve: Eleve, rng: RNG): void
         "Bourse d'excellence — admission post-bac",
         session.anneeCourante.libelle
       );
+      eleve.specialiteIngenieur = choisirSpecialiteIngenieur(eleve, rng, "direct");
     }
     eleve.anneePostBac = 1;
   }
@@ -663,6 +667,15 @@ export function simulerOrientation(session: Session): void {
   Object.values(session.eleves).forEach((eleve) => {
     if ((eleve.statut === "diplome") && eleve.carriere) {
       avancerCarriereEleve(eleve, session.anneeCourante.libelle, rngCarriere);
+    }
+  });
+
+  // Placements boursiers et achats de patrimoine des travailleurs les plus
+  // aisés, indépendamment de leur évolution de carrière.
+  const rngPatrimoine = rngDeSession(session, `PATRIMOINE-${session.anneeCourante.libelle}`);
+  Object.values(session.eleves).forEach((eleve) => {
+    if (eleve.statut === "diplome" && eleve.carriere) {
+      avancerPatrimoineEleve(eleve, session.anneeCourante.libelle, rngPatrimoine);
     }
   });
 
@@ -699,22 +712,39 @@ export function organiserOrientationPourNiveau(session: Session, groupeCle: stri
 }
 
 /** Durée (en années) de chaque cursus post-bac. Une classe préparatoire
- * débouche ensuite sur une école d'ingénieurs (3 années) ou l'université —
- * ce qui porte bien le cursus scientifique complet à 5 ans, comme dans le
- * système réel. Chaque parcours se termine par un diplôme (statut
- * "diplome"), jamais par un blocage silencieux. */
+ * scientifique (MPSI, Bio, Génie Civil) ou Commerce débouche sur un
+ * concours à l'issue de ses 2 années — en cas de réussite, admission en
+ * école d'ingénieurs ou de commerce (3 années de plus, cursus complet à 5
+ * ans comme dans le système réel) ; en cas d'échec, repli sur l'université.
+ * Chaque parcours se termine toujours par un diplôme, jamais un blocage
+ * silencieux. */
 const DUREE_POST_BAC: Partial<Record<Niveau, number>> = {
   PrepaScientifique: 2,
+  PrepaBio: 2,
+  PrepaGenieCivil: 2,
+  PrepaCommerce: 2,
   PrepaLitteraire: 2,
   DUT: 2,
   Universite: 3,
-  EcoleIngenieurs: 3, // 3 années après une prépa, 5 en admission directe (voir logique ci-dessous)
+  EcoleIngenieurs: 3, // 3 années après une prépa, 5 en admission directe
+  EcoleCommerce: 3,
 };
+
+const PREPAS_CONCOURS_INGENIEUR: Niveau[] = ["PrepaScientifique", "PrepaBio", "PrepaGenieCivil"];
+
+/** Probabilité de réussite au concours de fin de prépa, selon le niveau
+ * atteint (moyenne de la dernière année) et le potentiel caché. */
+function chanceReussiteConcours(eleve: Eleve): number {
+  const moyenne = eleve.moyennes[eleve.moyennes.length - 1]?.moyenneGenerale ?? 10;
+  const potMax = Math.max(eleve.potentiel.potentielScientifique, eleve.potentiel.potentielLitteraire);
+  return clamp(0.3 + (moyenne - 10) * 0.05 + (potMax / 100) * 0.25, 0.15, 0.92);
+}
 
 /** Fait avancer d'une année un élève déjà engagé dans un cursus post-bac,
  * une fois sa décision de passage validée pour l'année (mêmes règles de
  * mention/redoublement que le secondaire) : passage à l'année suivante,
- * transition prépa -> école/université, ou obtention du diplôme final. */
+ * concours de fin de prépa (réussite ou repli), ou obtention du diplôme
+ * final. */
 function avancerUneAnneePostBac(eleve: Eleve, annee: string, rng: RNG): void {
   eleve.anneePostBac = (eleve.anneePostBac ?? 1) + 1;
 
@@ -739,17 +769,60 @@ function avancerUneAnneePostBac(eleve: Eleve, annee: string, rng: RNG): void {
     return;
   }
 
-  // Fin du cycle en cours
-  if (eleve.niveau === "PrepaScientifique") {
-    eleve.niveau = "EcoleIngenieurs";
-    eleve.anneePostBac = 1;
-    eleve.historiqueOrientation.push({
-      annee,
-      niveauOrigine: "PrepaScientifique",
-      niveauDestination: "EcoleIngenieurs",
-      motif: "Admission à l'école d'ingénieurs à l'issue de la classe préparatoire (3 années restantes).",
-      scoreDetail: {},
-    });
+  // Fin de prépa scientifique (MPSI, Bio, Génie Civil) -> concours d'entrée
+  // en école d'ingénieurs, avec une vraie chance d'échec.
+  if (PREPAS_CONCOURS_INGENIEUR.includes(eleve.niveau)) {
+    const origine = eleve.niveau;
+    const reussite = rng() < chanceReussiteConcours(eleve);
+    if (reussite) {
+      eleve.niveau = "EcoleIngenieurs";
+      eleve.anneePostBac = 1;
+      eleve.specialiteIngenieur = choisirSpecialiteIngenieur(eleve, rng, origine);
+      eleve.historiqueOrientation.push({
+        annee,
+        niveauOrigine: origine,
+        niveauDestination: "EcoleIngenieurs",
+        motif: `Admis(e) au concours à l'issue de ${NOM_NIVEAU[origine]} — intégration en école d'ingénieurs, spécialité ${eleve.specialiteIngenieur} (3 années restantes).`,
+        scoreDetail: {},
+      });
+    } else {
+      eleve.niveau = "Universite";
+      eleve.anneePostBac = 1;
+      eleve.historiqueOrientation.push({
+        annee,
+        niveauOrigine: origine,
+        niveauDestination: "Universite",
+        motif: `Concours non validé à l'issue de ${NOM_NIVEAU[origine]} — poursuite en université.`,
+        scoreDetail: {},
+      });
+    }
+    return;
+  }
+
+  // Fin de Prépa Commerce -> concours d'entrée en école de commerce.
+  if (eleve.niveau === "PrepaCommerce") {
+    const reussite = rng() < chanceReussiteConcours(eleve);
+    if (reussite) {
+      eleve.niveau = "EcoleCommerce";
+      eleve.anneePostBac = 1;
+      eleve.historiqueOrientation.push({
+        annee,
+        niveauOrigine: "PrepaCommerce",
+        niveauDestination: "EcoleCommerce",
+        motif: "Admis(e) au concours à l'issue de la Prépa Commerce — intégration en école de commerce (3 années restantes).",
+        scoreDetail: {},
+      });
+    } else {
+      eleve.niveau = "Universite";
+      eleve.anneePostBac = 1;
+      eleve.historiqueOrientation.push({
+        annee,
+        niveauOrigine: "PrepaCommerce",
+        niveauDestination: "Universite",
+        motif: "Concours non validé à l'issue de la Prépa Commerce — poursuite en université.",
+        scoreDetail: {},
+      });
+    }
     return;
   }
 
@@ -766,7 +839,7 @@ function avancerUneAnneePostBac(eleve: Eleve, annee: string, rng: RNG): void {
     return;
   }
 
-  // DUT, Université ou École d'ingénieurs achevés -> diplôme, fin de parcours
+  // DUT, Université, École d'ingénieurs ou École de commerce achevés -> diplôme, fin de parcours
   eleve.statut = "diplome";
   eleve.historiqueOrientation.push({
     annee,

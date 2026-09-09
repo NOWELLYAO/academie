@@ -1,5 +1,7 @@
 import { Eleve, Niveau, OrientationEntry } from "../models/types";
+import { RNG } from "../utils/random";
 import {
+  FILIERES_COMMERCE,
   FILIERES_LITTERAIRES,
   FILIERES_MATHS_INFO,
   FILIERES_MATHS_PHYSIQUE,
@@ -119,10 +121,14 @@ export function estNiveauExamen(niveau: Niveau): boolean {
     niveau === "TermC" ||
     niveau === "TermD" ||
     niveau === "PrepaScientifique" ||
+    niveau === "PrepaBio" ||
+    niveau === "PrepaGenieCivil" ||
+    niveau === "PrepaCommerce" ||
     niveau === "PrepaLitteraire" ||
     niveau === "DUT" ||
     niveau === "Universite" ||
-    niveau === "EcoleIngenieurs"
+    niveau === "EcoleIngenieurs" ||
+    niveau === "EcoleCommerce"
   );
 }
 
@@ -130,7 +136,10 @@ export function estNiveauExamen(niveau: Niveau): boolean {
  * littéraire, DUT/BTS, université ou admission directe en école
  * d'ingénieurs — jamais un choix binaire, toujours selon les compétences
  * dominantes et le niveau atteint au baccalauréat. */
-export function orienterPostBac(eleve: Eleve): {
+export function orienterPostBac(
+  eleve: Eleve,
+  rng: RNG
+): {
   niveau: Niveau;
   motif: string;
   filieresConseillees: FiliereUniversitaire[];
@@ -138,34 +147,44 @@ export function orienterPostBac(eleve: Eleve): {
 } {
   const c = eleve.competences;
   const moyenne = moyenneEleve(eleve);
-  const estFiliereScientifique = eleve.niveau === "TermC" || eleve.niveau === "TermD";
 
-  if (estFiliereScientifique) {
+  // Série C — scientifique pur : le gros bataillon part en Prépa
+  // scientifique (MPSI), une partie des très bons profils polyvalents
+  // tente le Commerce, et quelques-uns rejoignent la Prépa Bio / Génie
+  // Civil aux côtés des meilleurs D.
+  if (eleve.niveau === "TermC") {
     const fortMathsPhysique = c.mathematiques >= 15 && c.physique >= 14;
     const fortMathsInfo = c.mathematiques >= 14 && c.informatique >= 15;
-    const fortSVT = c.svt >= 15;
 
-    if (moyenne >= 16 && c.mathematiques >= 17 && c.physique >= 15 && eleve.niveau === "TermC") {
+    if (moyenne >= 17 && c.mathematiques >= 18 && c.physique >= 16) {
       return {
         niveau: "EcoleIngenieurs",
-        motif: "Excellence scientifique — admission directe en école d'ingénieurs post-bac.",
+        motif: "Excellence scientifique exceptionnelle — admission directe en école d'ingénieurs post-bac (cursus 5 ans).",
         filieresConseillees: [...FILIERES_MATHS_PHYSIQUE, ...FILIERES_MATHS_INFO].slice(0, 4),
         excellence: true,
       };
     }
-    if (moyenne >= 13.5 && (fortMathsPhysique || fortMathsInfo)) {
+    if (moyenne >= 14 && rng() < 0.15) {
       return {
-        niveau: "PrepaScientifique",
-        motif: "Bon niveau scientifique — classe préparatoire (CPGE) visant les concours d'écoles d'ingénieurs.",
-        filieresConseillees: [...FILIERES_MATHS_PHYSIQUE, ...FILIERES_MATHS_INFO].slice(0, 4),
+        niveau: "PrepaCommerce",
+        motif: "Bon profil polyvalent — classe préparatoire aux écoles de commerce.",
+        filieresConseillees: FILIERES_COMMERCE,
         excellence: false,
       };
     }
-    if (fortSVT && moyenne >= 13) {
+    if (moyenne >= 14 && fortMathsPhysique && rng() < 0.12) {
       return {
-        niveau: "Universite",
-        motif: "Profil SVT solide — parcours universitaire scientifique (biologie, médecine, agronomie).",
-        filieresConseillees: FILIERES_SVT,
+        niveau: "PrepaGenieCivil",
+        motif: "Bon profil scientifique — classe préparatoire visant le concours du génie civil.",
+        filieresConseillees: FILIERES_MATHS_PHYSIQUE,
+        excellence: false,
+      };
+    }
+    if (moyenne >= 13 && (fortMathsPhysique || fortMathsInfo)) {
+      return {
+        niveau: "PrepaScientifique",
+        motif: "Bon niveau scientifique — classe préparatoire MPSI visant le concours des écoles d'ingénieurs.",
+        filieresConseillees: [...FILIERES_MATHS_PHYSIQUE, ...FILIERES_MATHS_INFO].slice(0, 4),
         excellence: false,
       };
     }
@@ -185,15 +204,71 @@ export function orienterPostBac(eleve: Eleve): {
     };
   }
 
-  // TermA — profil littéraire
+  // Série D — scientifique / SVT : les meilleurs partent en Prépa Bio
+  // (BCPST) ou Prépa Génie Civil selon leur profil dominant, jamais en
+  // MPSI (réservée à la série C).
+  if (eleve.niveau === "TermD") {
+    const fortSVT = c.svt >= 15;
+    const fortMathsPhysique = c.mathematiques >= 14 && c.physique >= 13;
+
+    if (moyenne >= 14 && fortSVT) {
+      return {
+        niveau: "PrepaBio",
+        motif: "Excellent profil SVT — classe préparatoire BCPST visant les concours d'écoles d'ingénieurs et vétérinaires/agronomiques.",
+        filieresConseillees: FILIERES_SVT,
+        excellence: false,
+      };
+    }
+    if (moyenne >= 14 && fortMathsPhysique) {
+      return {
+        niveau: "PrepaGenieCivil",
+        motif: "Bon profil scientifique — classe préparatoire visant le concours du génie civil.",
+        filieresConseillees: FILIERES_MATHS_PHYSIQUE,
+        excellence: false,
+      };
+    }
+    if (fortSVT && moyenne >= 12) {
+      return {
+        niveau: "Universite",
+        motif: "Profil SVT solide — parcours universitaire scientifique (biologie, médecine, agronomie).",
+        filieresConseillees: FILIERES_SVT,
+        excellence: false,
+      };
+    }
+    if (moyenne >= 10) {
+      return {
+        niveau: "DUT",
+        motif: "Niveau correct mais profil plus technique — DUT/BTS pour une insertion professionnelle rapide.",
+        filieresConseillees: FILIERES_SVT.slice(0, 2),
+        excellence: false,
+      };
+    }
+    return {
+      niveau: "Universite",
+      motif: "Poursuite en université, filière scientifique généraliste.",
+      filieresConseillees: FILIERES_SVT.slice(0, 2),
+      excellence: false,
+    };
+  }
+
+  // Série A — littéraire : les meilleurs partent en Prépa littéraire, une
+  // partie en Prépa Commerce (comme certains excellents C).
   const fortLitteraire = c.francais >= 15 && c.anglais >= 13 && (c.philosophie ?? 0) >= 13;
 
-  if (moyenne >= 15 && fortLitteraire) {
+  if (moyenne >= 15 && fortLitteraire && rng() < 0.7) {
     return {
       niveau: "PrepaLitteraire",
       motif: "Excellent profil littéraire — classe préparatoire littéraire (objectif Sciences Po / ENS).",
       filieresConseillees: FILIERES_LITTERAIRES,
       excellence: true,
+    };
+  }
+  if (moyenne >= 14 && rng() < 0.3) {
+    return {
+      niveau: "PrepaCommerce",
+      motif: "Bon profil littéraire polyvalent — classe préparatoire aux écoles de commerce.",
+      filieresConseillees: FILIERES_COMMERCE,
+      excellence: false,
     };
   }
   if (moyenne >= 10) {

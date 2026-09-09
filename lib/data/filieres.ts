@@ -32,3 +32,10 @@ export const FILIERES_LITTERAIRES: FiliereUniversitaire[] = [
   { nom: "Lettres modernes", domaine: "lettres" },
   { nom: "Langues", domaine: "lettres" },
 ];
+
+export const FILIERES_COMMERCE: FiliereUniversitaire[] = [
+  { nom: "Commerce international", domaine: "lettres" },
+  { nom: "Finance d'entreprise", domaine: "lettres" },
+  { nom: "Management", domaine: "lettres" },
+  { nom: "Marketing", domaine: "lettres" },
+];

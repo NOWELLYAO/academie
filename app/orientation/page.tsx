@@ -5,6 +5,7 @@ import { useAcademyStore } from "@/lib/store/useAcademyStore";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import { scoreOrientation, orienterPostBac } from "@/lib/engines/orientation";
+import { mulberry32 } from "@/lib/utils/random";
 import { NOM_NIVEAU } from "@/lib/data/subjects";
 
 export default function OrientationPage() {
@@ -66,7 +67,8 @@ export default function OrientationPage() {
           </h2>
           <div className="border border-line bg-white/60 divide-y divide-line">
             {enTerminale.slice(0, 15).map((e) => {
-              const { niveau: destination, filieresConseillees, excellence } = orienterPostBac(e);
+              const rngApercu = mulberry32(e.matricule.split("").reduce((a, ch) => a * 31 + ch.charCodeAt(0), 7));
+              const { niveau: destination, filieresConseillees, excellence } = orienterPostBac(e, rngApercu);
               const score = scoreOrientation(e);
               return (
                 <div key={e.matricule} className="px-4 py-3 flex items-start justify-between gap-4 flex-wrap">

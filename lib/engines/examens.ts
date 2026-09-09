@@ -21,10 +21,14 @@ const TYPE_PAR_NIVEAU: Partial<Record<Niveau, string>> = {
   TermC: "Bac",
   TermD: "Bac",
   PrepaScientifique: "Session Prépa scientifique",
+  PrepaBio: "Session Prépa Bio",
+  PrepaGenieCivil: "Session Prépa Génie Civil",
+  PrepaCommerce: "Session Prépa Commerce",
   PrepaLitteraire: "Session Prépa littéraire",
   DUT: "Session DUT/BTS",
   Universite: "Session Université",
   EcoleIngenieurs: "Session École d'ingénieurs",
+  EcoleCommerce: "Session École de commerce",
 };
 
 function serieDuNiveau(niveau: string): string | null {
@@ -74,10 +78,14 @@ export function typesDisponibles(resultats: ResultatExamen[]): string[] {
     "BEPC",
     "Bac",
     "Session Prépa scientifique",
+    "Session Prépa Bio",
+    "Session Prépa Génie Civil",
+    "Session Prépa Commerce",
     "Session Prépa littéraire",
     "Session DUT/BTS",
     "Session Université",
     "Session École d'ingénieurs",
+    "Session École de commerce",
   ];
   const presents = new Set(resultats.map((r) => r.type));
   return ordre.filter((t) => presents.has(t));

@@ -105,6 +105,59 @@ export default function CarrieresPage() {
         />
       </div>
 
+      {tousDiplomes.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+          <div>
+            <h2 className="font-display text-base text-ink mb-2">🏆 Salaires les plus élevés</h2>
+            <div className="border border-line bg-white/60 divide-y divide-line">
+              {[...tousDiplomes]
+                .sort((a, b) => (b.carriere?.salaireMensuel ?? 0) - (a.carriere?.salaireMensuel ?? 0))
+                .slice(0, 10)
+                .map((e, i) => (
+                  <Link
+                    key={e.matricule}
+                    href={`/eleves/${e.matricule}`}
+                    className="px-3 py-2 flex items-center gap-2 text-sm hover:bg-gold-soft/20"
+                  >
+                    <span className="text-slate w-5 shrink-0">{i + 1}</span>
+                    <Avatar matricule={e.matricule} nom={e.nom} prenom={e.prenom} size={22} />
+                    <span className="flex-1 min-w-0 truncate">
+                      {e.nom} {e.prenom} <span className="text-slate">— {e.carriere!.nom}</span>
+                    </span>
+                    <span className="font-medium tabular-nums shrink-0">
+                      {formaterFCFA(e.carriere!.salaireMensuel)}
+                    </span>
+                  </Link>
+                ))}
+            </div>
+          </div>
+          <div>
+            <h2 className="font-display text-base text-ink mb-2">📉 Salaires les plus modestes</h2>
+            <div className="border border-line bg-white/60 divide-y divide-line">
+              {[...tousDiplomes]
+                .sort((a, b) => (a.carriere?.salaireMensuel ?? 0) - (b.carriere?.salaireMensuel ?? 0))
+                .slice(0, 10)
+                .map((e, i) => (
+                  <Link
+                    key={e.matricule}
+                    href={`/eleves/${e.matricule}`}
+                    className="px-3 py-2 flex items-center gap-2 text-sm hover:bg-paper-dim"
+                  >
+                    <span className="text-slate w-5 shrink-0">{i + 1}</span>
+                    <Avatar matricule={e.matricule} nom={e.nom} prenom={e.prenom} size={22} />
+                    <span className="flex-1 min-w-0 truncate">
+                      {e.nom} {e.prenom} <span className="text-slate">— {e.carriere!.nom}</span>
+                    </span>
+                    <span className="font-medium tabular-nums shrink-0 text-slate">
+                      {formaterFCFA(e.carriere!.salaireMensuel)}
+                    </span>
+                  </Link>
+                ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex gap-3 mb-8 flex-wrap items-center">
         <select
           value={secteur}
@@ -159,6 +212,7 @@ export default function CarrieresPage() {
                 <th></th>
                 <th>Élève</th>
                 <th>Métier</th>
+                <th>Employeur</th>
                 <th>Secteur</th>
                 <th>Statut</th>
                 <th>Responsabilité</th>
@@ -180,6 +234,7 @@ export default function CarrieresPage() {
                   <td className="font-medium">
                     {ICONE_SECTEUR[e.carriere!.secteur] ?? ""} {e.carriere!.nom}
                   </td>
+                  <td className="text-slate">{e.carriere!.entreprise}</td>
                   <td className="text-slate">{e.carriere!.secteur}</td>
                   <td className="text-xs text-slate whitespace-nowrap">
                     {e.statut === "retraite"

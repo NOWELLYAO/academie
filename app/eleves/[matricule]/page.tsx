@@ -217,9 +217,9 @@ export default function ElevePage({
                   {ICONE_SECTEUR[eleve.carriere.secteur] ?? ""} {eleve.carriere.nom}
                 </div>
                 <div className="text-xs text-slate">
-                  {eleve.carriere.secteur} ·{" "}
-                  {LIBELLE_RESPONSABILITE[eleve.carriere.niveauResponsabilite as 1 | 2 | 3 | 4 | 5]}
+                  {eleve.carriere.entreprise} · {LIBELLE_RESPONSABILITE[eleve.carriere.niveauResponsabilite as 1 | 2 | 3 | 4 | 5]}
                   {eleve.carriere.typeCarriere === "entrepreneur" && " · Entrepreneur"}
+                  {eleve.specialiteIngenieur && ` · Spécialité ${eleve.specialiteIngenieur}`}
                 </div>
                 <div className="text-sm font-medium text-ink mt-1">
                   {formaterFCFA(eleve.carriere.salaireMensuel)} / mois
@@ -265,6 +265,46 @@ export default function ElevePage({
                   </div>
                 ))}
               </div>
+
+              {(eleve.bourse || (eleve.patrimoine && eleve.patrimoine.length > 0)) && (
+                <>
+                  <h2 className="font-display text-lg text-ink mt-8 mb-3">📈 Patrimoine</h2>
+                  {eleve.bourse && (
+                    <div className="border border-line bg-white/60 px-4 py-3 mb-3">
+                      <div className="text-xs uppercase tracking-wide text-slate mb-0.5">
+                        Portefeuille boursier
+                      </div>
+                      <div className="text-base font-medium text-ink">
+                        {formaterFCFA(eleve.bourse.valeur)}
+                      </div>
+                      {eleve.bourse.historique[0] && (
+                        <div className="text-[11px] text-slate mt-1">
+                          Dernier mouvement ({eleve.bourse.historique[0].annee}) :{" "}
+                          {eleve.bourse.historique[0].motif}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {eleve.patrimoine && eleve.patrimoine.length > 0 && (
+                    <div className="border border-line bg-white/60 divide-y divide-line">
+                      {eleve.patrimoine.map((bien) => (
+                        <div key={bien.id} className="px-4 py-2.5 flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-sm text-ink">
+                              {bien.type === "voiture" && "🚗"} {bien.type === "maison" && "🏠"}
+                              {bien.type === "terrain" && "🗺️"} {bien.type === "bijoux" && "💎"} {bien.nom}
+                            </p>
+                            <p className="text-[11px] text-slate mt-0.5">Acquis en {bien.anneeAchat}</p>
+                          </div>
+                          <span className="text-sm font-medium text-ink shrink-0 tabular-nums">
+                            {formaterFCFA(bien.valeurAchat)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
             </>
           )}
         </div>

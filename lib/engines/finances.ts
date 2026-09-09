@@ -33,6 +33,17 @@ export function crediterEleve(
   eleve.historiqueFinancier = eleve.historiqueFinancier.slice(0, HISTORIQUE_MAX);
 }
 
+/** Débite un élève (investissement, achat de patrimoine...) — enregistré
+ * comme une transaction négative dans le même historique, pour que toutes
+ * les actions financières restent visibles au même endroit. */
+export function debiterEleve(eleve: Eleve, montant: number, motif: string, annee: string): void {
+  if (montant <= 0) return;
+  eleve.solde = Math.round((eleve.solde ?? 0) - montant);
+  if (!eleve.historiqueFinancier) eleve.historiqueFinancier = [];
+  eleve.historiqueFinancier.unshift({ id: uuid(), motif, montant: -montant, annee });
+  eleve.historiqueFinancier = eleve.historiqueFinancier.slice(0, HISTORIQUE_MAX);
+}
+
 export function formaterFCFA(montant: number): string {
   return `${Math.round(montant).toLocaleString("fr-FR")} FCFA`;
 }

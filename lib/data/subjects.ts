@@ -8,6 +8,7 @@ export const MATIERES: Matiere[] = [
       "3e": 4, "2ndeC": 5, "2ndeA": 2, "1ereC": 6, "1ereD": 5, "1ereA": 1,
       TermC: 7, TermD: 5, TermA: 2,
       PrepaScientifique: 6, DUT: 3, Universite: 3, EcoleIngenieurs: 6,
+      PrepaBio: 3, PrepaGenieCivil: 6, PrepaCommerce: 4, EcoleCommerce: 4,
     },
   },
   {
@@ -16,6 +17,7 @@ export const MATIERES: Matiere[] = [
     coefficientsParNiveau: {
       "3e": 3, "2ndeC": 5, "1ereC": 6, "1ereD": 4, TermC: 6, TermD: 4,
       PrepaScientifique: 5, DUT: 2, EcoleIngenieurs: 5,
+      PrepaBio: 4, PrepaGenieCivil: 6,
     },
   },
   {
@@ -23,6 +25,7 @@ export const MATIERES: Matiere[] = [
     nom: "SVT",
     coefficientsParNiveau: {
       "3e": 3, "2ndeC": 2, "1ereD": 6, TermD: 7, Universite: 3,
+      PrepaBio: 6,
     },
   },
   {
@@ -32,6 +35,7 @@ export const MATIERES: Matiere[] = [
       "3e": 4, "2ndeC": 3, "2ndeA": 4, "1ereC": 2, "1ereD": 2, "1ereA": 4,
       TermC: 2, TermD: 2, TermA: 6,
       PrepaLitteraire: 5, Universite: 3,
+      PrepaBio: 1, PrepaCommerce: 4, EcoleCommerce: 3,
     },
   },
   {
@@ -41,6 +45,7 @@ export const MATIERES: Matiere[] = [
       "3e": 2, "2ndeC": 2, "2ndeA": 3, "1ereC": 2, "1ereD": 2, "1ereA": 3,
       TermC: 2, TermD: 1, TermA: 5,
       PrepaScientifique: 2, PrepaLitteraire: 4, DUT: 1, Universite: 2, EcoleIngenieurs: 1,
+      PrepaBio: 1, PrepaGenieCivil: 1, PrepaCommerce: 5, EcoleCommerce: 5,
     },
   },
   {
@@ -49,6 +54,7 @@ export const MATIERES: Matiere[] = [
     coefficientsParNiveau: {
       "3e": 2, "2ndeC": 2, "1ereC": 3, "1ereD": 1, TermC: 3, TermD: 1,
       PrepaScientifique: 2, DUT: 4, Universite: 2, EcoleIngenieurs: 3,
+      PrepaGenieCivil: 2, PrepaCommerce: 2, EcoleCommerce: 3,
     },
   },
   {
@@ -81,10 +87,14 @@ export const NOM_NIVEAU: Record<Niveau, string> = {
   TermD: "Terminale D",
   TermA: "Terminale A",
   PrepaScientifique: "Prépa scientifique (MPSI)",
+  PrepaBio: "Prépa Bio (BCPST)",
+  PrepaGenieCivil: "Prépa Génie Civil",
+  PrepaCommerce: "Prépa Commerce",
   PrepaLitteraire: "Prépa littéraire (Hypokhâgne)",
   DUT: "DUT / BTS",
   Universite: "Université",
   EcoleIngenieurs: "École d'ingénieurs",
+  EcoleCommerce: "École de commerce",
 };
 
 export const LIBELLE_STATUT: Record<string, string> = {
@@ -101,10 +111,14 @@ export const LIBELLE_STATUT: Record<string, string> = {
  * fixe menant toujours à un diplôme. */
 export const NIVEAUX_POST_BAC: Niveau[] = [
   "PrepaScientifique",
+  "PrepaBio",
+  "PrepaGenieCivil",
+  "PrepaCommerce",
   "PrepaLitteraire",
   "DUT",
   "Universite",
   "EcoleIngenieurs",
+  "EcoleCommerce",
 ];
 
 export function estPostBac(niveau: Niveau): boolean {

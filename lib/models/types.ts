@@ -20,10 +20,14 @@ export type Niveau =
   | "TermD"
   | "TermA"
   | "PrepaScientifique"
+  | "PrepaBio"
+  | "PrepaGenieCivil"
+  | "PrepaCommerce"
   | "PrepaLitteraire"
   | "DUT"
   | "Universite"
-  | "EcoleIngenieurs";
+  | "EcoleIngenieurs"
+  | "EcoleCommerce";
 
 export const ORDRE_NIVEAUX: Niveau[] = [
   "3e",
@@ -36,7 +40,11 @@ export const ORDRE_NIVEAUX: Niveau[] = [
   "TermD",
   "TermA",
   "EcoleIngenieurs",
+  "EcoleCommerce",
   "PrepaScientifique",
+  "PrepaBio",
+  "PrepaGenieCivil",
+  "PrepaCommerce",
   "PrepaLitteraire",
   "DUT",
   "Universite",
@@ -171,6 +179,10 @@ export interface Eleve {
   marie?: boolean;
   conjointMatricule?: string;
   anneeMariage?: string;
+  serieBac?: "A" | "C" | "D";
+  specialiteIngenieur?: string;
+  bourse?: PortefeuilleBourse;
+  patrimoine?: ActifPatrimoine[];
 }
 
 export interface Classe {
@@ -216,6 +228,7 @@ export interface EtapeCarriere {
   annee: string;
   metierId: string;
   nom: string;
+  entreprise: string;
   secteur: string;
   niveauResponsabilite: number;
   salaireMensuel: number;
@@ -225,6 +238,7 @@ export interface EtapeCarriere {
 export interface Carriere {
   metierId: string;
   nom: string;
+  entreprise: string;
   secteur: string;
   niveauResponsabilite: number;
   salaireMensuel: number;
@@ -233,6 +247,26 @@ export interface Carriere {
   typeCarriere: "salarie" | "entrepreneur";
   statutEntreprise?: "en_activite" | "faillite" | "succes";
   paysExpatriation?: string;
+}
+
+export interface ActifPatrimoine {
+  id: string;
+  type: "voiture" | "maison" | "terrain" | "bijoux" | "autre";
+  nom: string;
+  valeurAchat: number;
+  anneeAchat: string;
+}
+
+export interface EtapeBourse {
+  annee: string;
+  action: "achat" | "vente" | "performance";
+  montant: number;
+  motif: string;
+}
+
+export interface PortefeuilleBourse {
+  valeur: number;
+  historique: EtapeBourse[];
 }
 
 export interface TransactionFinanciere {
