@@ -14,7 +14,7 @@ export default function ResultatsPage() {
 
   if (!session) {
     return (
-      <div className="p-10">
+      <div className="p-5 md:p-10">
         <p className="text-slate text-sm">
           Aucune session active.{" "}
           <Link href="/" className="text-ink border-b border-gold">
@@ -38,7 +38,7 @@ export default function ResultatsPage() {
     .sort((a, b) => (b.moyenneTrimestre!.moyenneGenerale) - (a.moyenneTrimestre!.moyenneGenerale));
 
   return (
-    <div className="p-10 max-w-5xl">
+    <div className="p-5 md:p-10 max-w-5xl">
       <PageHeader eyebrow={session.anneeCourante.libelle} title="Résultats" description="Consultez les moyennes par trimestre." />
 
       <div className="flex gap-3 mb-6 flex-wrap">

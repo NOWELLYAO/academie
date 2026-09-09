@@ -14,7 +14,7 @@ export default function NotesSelectionPage() {
 
   if (!session) {
     return (
-      <div className="p-10">
+      <div className="p-5 md:p-10">
         <p className="text-slate text-sm">
           Aucune session active.{" "}
           <Link href="/" className="text-ink border-b border-gold">
@@ -30,7 +30,7 @@ export default function NotesSelectionPage() {
   const matieres = classe ? matieresDuNiveau(classe.niveau) : [];
 
   return (
-    <div className="p-10 max-w-4xl">
+    <div className="p-5 md:p-10 max-w-4xl">
       <PageHeader eyebrow="Gestion des notes" title="Saisir les évaluations" description="Choisissez une classe puis une matière pour créer une évaluation et saisir les notes." />
 
       <div className="border border-line bg-white/60 p-6 max-w-lg">

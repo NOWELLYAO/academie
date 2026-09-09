@@ -90,7 +90,7 @@ export default function ComparateurPage() {
 
   if (!session) {
     return (
-      <div className="p-10">
+      <div className="p-5 md:p-10">
         <p className="text-slate text-sm">
           Aucune session active.{" "}
           <Link href="/" className="text-ink border-b border-gold">
@@ -103,7 +103,7 @@ export default function ComparateurPage() {
   }
 
   return (
-    <div className="p-10 max-w-5xl">
+    <div className="p-5 md:p-10 max-w-5xl">
       <PageHeader
         eyebrow="Comparateur"
         title="Comparer les performances"

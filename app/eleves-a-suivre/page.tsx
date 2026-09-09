@@ -80,7 +80,7 @@ export default function ElevesASuivrePage() {
 
   if (!session) {
     return (
-      <div className="p-10">
+      <div className="p-5 md:p-10">
         <p className="text-slate text-sm">
           Aucune session active.{" "}
           <Link href="/" className="text-ink border-b border-gold">
@@ -93,7 +93,7 @@ export default function ElevesASuivrePage() {
   }
 
   return (
-    <div className="p-10 max-w-6xl">
+    <div className="p-5 md:p-10 max-w-6xl">
       <PageHeader
         eyebrow="Vue d'ensemble"
         title="Élèves à suivre"

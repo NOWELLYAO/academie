@@ -84,3 +84,17 @@ h1, h2, h3, .font-display {
   background: var(--line);
   border-radius: 3px;
 }
+
+/* Zones sûres iPhone (encoche / Dynamic Island / barre d'accueil) */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.safe-left {
+  padding-left: env(safe-area-inset-left);
+}
+.safe-right {
+  padding-right: env(safe-area-inset-right);
+}

@@ -30,7 +30,7 @@ export default function ElevePage({
 
   if (!eleve) {
     return (
-      <div className="p-10">
+      <div className="p-5 md:p-10">
         <p className="text-slate text-sm">Élève introuvable.</p>
       </div>
     );
@@ -42,7 +42,7 @@ export default function ElevePage({
   const badges = calculerBadges(eleve);
 
   return (
-    <div className="p-10 max-w-5xl">
+    <div className="p-5 md:p-10 max-w-5xl">
       <Link href="/eleves" className="text-xs text-slate hover:text-ink mb-4 inline-block">
         ← Recherche d&apos;élèves
       </Link>

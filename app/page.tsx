@@ -22,11 +22,11 @@ export default function AccueilPage() {
 
   return (
     <div className="min-h-screen flex items-center">
-      <div className="max-w-3xl mx-auto px-8 py-16 w-full">
+      <div className="max-w-3xl mx-auto px-5 py-12 md:px-8 md:py-16 w-full safe-bottom">
         <div className="text-[11px] uppercase tracking-wide text-gold mb-3">
           Simulateur de gestion scolaire
         </div>
-        <h1 className="font-display text-5xl leading-[1.1] text-ink mb-4">
+        <h1 className="font-display text-4xl md:text-5xl leading-[1.1] text-ink mb-4">
           Académie
           <br />
           Génération

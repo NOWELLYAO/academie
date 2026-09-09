@@ -120,7 +120,7 @@ export default function BulletinPage() {
 
   if (!session) {
     return (
-      <div className="p-10">
+      <div className="p-5 md:p-10">
         <p className="text-slate text-sm">
           Aucune session active.{" "}
           <Link href="/" className="text-ink border-b border-gold">
@@ -136,7 +136,7 @@ export default function BulletinPage() {
     tri.colonne === colonne ? (tri.sens === -1 ? " ▼" : " ▲") : "";
 
   return (
-    <div className="p-10 max-w-full">
+    <div className="p-5 md:p-10 max-w-full">
       <PageHeader
         eyebrow="Feuille de notes exhaustive"
         title="Bulletin complet"

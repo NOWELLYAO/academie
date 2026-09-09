@@ -37,7 +37,7 @@ export default function HallOfFamePage() {
 
   if (!session) {
     return (
-      <div className="p-10">
+      <div className="p-5 md:p-10">
         <p className="text-slate text-sm">
           Aucune session active.{" "}
           <Link href="/" className="text-ink border-b border-gold">
@@ -53,7 +53,7 @@ export default function HallOfFamePage() {
   const bilan = session.bilan;
 
   return (
-    <div className="p-10 max-w-4xl">
+    <div className="p-5 md:p-10 max-w-4xl">
       <PageHeader
         eyebrow="🏆"
         title="Hall of Fame"

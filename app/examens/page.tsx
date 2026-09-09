@@ -33,7 +33,7 @@ export default function ExamensPage() {
 
   if (!session) {
     return (
-      <div className="p-10">
+      <div className="p-5 md:p-10">
         <p className="text-slate text-sm">
           Aucune session active.{" "}
           <Link href="/" className="text-ink border-b border-gold">
@@ -47,7 +47,7 @@ export default function ExamensPage() {
 
   if (tousResultats.length === 0) {
     return (
-      <div className="p-10 max-w-3xl">
+      <div className="p-5 md:p-10 max-w-3xl">
         <PageHeader
           eyebrow="📊 KPIs d'examen"
           title="Examens"
@@ -73,7 +73,7 @@ export default function ExamensPage() {
   }, {});
 
   return (
-    <div className="p-10 max-w-5xl">
+    <div className="p-5 md:p-10 max-w-5xl">
       <PageHeader
         eyebrow="📊 KPIs d'examen"
         title="Examens"

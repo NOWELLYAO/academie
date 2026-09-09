@@ -21,7 +21,7 @@ export default function ClasseDetailPage({
   const classe = session.classes.find((c) => c.id === classId);
   if (!classe) {
     return (
-      <div className="p-10">
+      <div className="p-5 md:p-10">
         <p className="text-slate text-sm">Classe introuvable.</p>
       </div>
     );
@@ -39,7 +39,7 @@ export default function ClasseDetailPage({
     : 0;
 
   return (
-    <div className="p-10 max-w-6xl">
+    <div className="p-5 md:p-10 max-w-6xl">
       <Link href="/classes" className="text-xs text-slate hover:text-ink mb-4 inline-block">
         ← Toutes les classes
       </Link>

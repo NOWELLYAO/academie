@@ -33,7 +33,7 @@ export default function EvolutionPage() {
 
   if (!session) {
     return (
-      <div className="p-10">
+      <div className="p-5 md:p-10">
         <p className="text-slate text-sm">
           Aucune session active.{" "}
           <Link href="/" className="text-ink border-b border-gold">
@@ -49,7 +49,7 @@ export default function EvolutionPage() {
 
   if (historique.length === 0) {
     return (
-      <div className="p-10 max-w-3xl">
+      <div className="p-5 md:p-10 max-w-3xl">
         <PageHeader
           eyebrow="Suivi pluriannuel"
           title="Évolution de la génération"
@@ -98,7 +98,7 @@ export default function EvolutionPage() {
   const dernier = historique[historique.length - 1];
 
   return (
-    <div className="p-10 max-w-6xl">
+    <div className="p-5 md:p-10 max-w-6xl">
       <PageHeader
         eyebrow="Suivi pluriannuel"
         title="Évolution de la génération"

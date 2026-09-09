@@ -39,7 +39,7 @@ export default function NotesSaisiePage({
   const matiereInfo = MATIERES.find((m) => m.key === matiere);
   if (!classe || !matiereInfo) {
     return (
-      <div className="p-10">
+      <div className="p-5 md:p-10">
         <p className="text-slate text-sm">Classe ou matière introuvable.</p>
       </div>
     );
@@ -59,7 +59,7 @@ export default function NotesSaisiePage({
   }
 
   return (
-    <div className="p-10 max-w-5xl">
+    <div className="p-5 md:p-10 max-w-5xl">
       <Link href="/notes" className="text-xs text-slate hover:text-ink mb-4 inline-block">
         ← Choisir une autre classe/matière
       </Link>

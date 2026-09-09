@@ -90,7 +90,7 @@ export default function ExportsPage() {
 
   if (!session) {
     return (
-      <div className="p-10">
+      <div className="p-5 md:p-10">
         <p className="text-slate text-sm">
           Aucune session active.{" "}
           <Link href="/" className="text-ink border-b border-gold">
@@ -118,7 +118,7 @@ export default function ExportsPage() {
   const nomFichier = slugify(`${titre}-${libellePortee}-${session.anneeCourante.libelle}`);
 
   return (
-    <div className="p-10 max-w-5xl">
+    <div className="p-5 md:p-10 max-w-5xl">
       <PageHeader
         eyebrow="Export"
         title="Fiches PDF / Excel"
