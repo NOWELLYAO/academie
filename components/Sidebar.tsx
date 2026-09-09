@@ -21,6 +21,7 @@ const LIENS = [
   { href: "/classements", label: "Classements", groupe: "analyse" },
   { href: "/eleves-a-suivre", label: "Élèves à suivre", groupe: "analyse" },
   { href: "/orientation", label: "Orientation", groupe: "analyse" },
+  { href: "/examens", label: "📊 Examens", groupe: "analyse" },
   { href: "/statistiques", label: "Statistiques", groupe: "analyse" },
   { href: "/hall-of-fame", label: "Hall of Fame", groupe: "analyse" },
   { href: "/tableau-honneur", label: "Tableau d'honneur", groupe: "analyse" },
