@@ -45,14 +45,22 @@ interface AcademyState {
 
 /** Recalcule et met à jour l'entrée de moyenne trimestrielle d'un élève
  * après une (ou plusieurs) saisie(s) de note, en la créant si besoin. */
-function recalculerMoyenneEleve(eleve: Session["eleves"][string], trimestre: 1 | 2 | 3, annee: string) {
+function recalculerMoyenneEleve(
+  session: Session,
+  eleve: Session["eleves"][string],
+  trimestre: 1 | 2 | 3,
+  annee: string
+) {
   const { parMatiere, moyenneGenerale } = calculerMoyenneTrimestre(eleve, trimestre, annee);
   let entree = eleve.moyennes.find((m) => m.trimestre === trimestre && m.annee === annee);
   if (!entree) {
+    const classeActuelle = session.classes.find((c) => c.id === eleve.classeId);
     entree = {
       trimestre: trimestre as 1 | 2 | 3,
       annee,
       niveau: eleve.niveau,
+      classeId: eleve.classeId,
+      classeNom: classeActuelle?.nom ?? eleve.classeId,
       parMatiere: [],
       moyenneGenerale: 0,
       rangClasse: 0,
@@ -145,7 +153,7 @@ export const useAcademyStore = create<AcademyState>()(
         saisirNote(clone, evaluation, matricule, valeur);
 
         const eleve = clone.eleves[matricule];
-        if (eleve) recalculerMoyenneEleve(eleve, evaluation.trimestre, evaluation.annee);
+        if (eleve) recalculerMoyenneEleve(clone, eleve, evaluation.trimestre, evaluation.annee);
 
         set({ session: clone });
       },
@@ -164,7 +172,7 @@ export const useAcademyStore = create<AcademyState>()(
 
         classe.matricules.forEach((matricule) => {
           const eleve = clone.eleves[matricule];
-          if (eleve) recalculerMoyenneEleve(eleve, evaluation.trimestre, evaluation.annee);
+          if (eleve) recalculerMoyenneEleve(clone, eleve, evaluation.trimestre, evaluation.annee);
         });
 
         set({ session: clone });

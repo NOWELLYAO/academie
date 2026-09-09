@@ -15,6 +15,7 @@ import { formaterFCFA } from "@/lib/engines/finances";
 import { exporterBulletinIndividuel } from "@/lib/export/pdf";
 import FavoriteStar from "@/components/FavoriteStar";
 import Avatar from "@/components/Avatar";
+import FicheNotesComplete from "@/components/FicheNotesComplete";
 
 export default function ElevePage({
   params,
@@ -117,6 +118,15 @@ export default function ElevePage({
         <p className="font-display text-base text-ink leading-relaxed italic">
           &laquo; {appreciation} &raquo;
         </p>
+      </div>
+
+      <h2 className="font-display text-lg text-ink mb-1">📋 Fiche de notes complète</h2>
+      <p className="text-xs text-slate mb-3">
+        Toutes les années effectuées depuis la 3e, doublées ou non, avec moyenne, rangs et
+        commentaire de chaque année.
+      </p>
+      <div className="mb-10">
+        <FicheNotesComplete eleve={eleve} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">

@@ -104,6 +104,8 @@ export interface MoyenneTrimestre {
   trimestre: 1 | 2 | 3;
   annee: string;
   niveau: Niveau;
+  classeId: string;
+  classeNom: string;
   parMatiere: MoyenneMatiere[];
   moyenneGenerale: number;
   rangClasse: number;

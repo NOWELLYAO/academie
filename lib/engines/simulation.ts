@@ -104,10 +104,13 @@ function recalculerMoyenneTrimestreEleve(
     (m) => m.trimestre === trimestre && m.annee === session.anneeCourante.libelle
   );
   if (!entree) {
+    const classeActuelle = session.classes.find((c) => c.id === eleve.classeId);
     entree = {
       trimestre,
       annee: session.anneeCourante.libelle,
       niveau: eleve.niveau,
+      classeId: eleve.classeId,
+      classeNom: classeActuelle?.nom ?? NOM_NIVEAU[eleve.niveau],
       parMatiere: [],
       moyenneGenerale: 0,
       rangClasse: 0,
