@@ -4,7 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { EvaluationDef, Session, SubjectKey } from "../models/types";
 import { genererSession } from "../engines/generation";
-import { etapeSuivante, genererNotesPourNiveau } from "../engines/simulation";
+import { etapeSuivante, genererNotesPourNiveau, organiserExamenPourNiveau } from "../engines/simulation";
 import {
   calculerMoyenneTrimestre,
   creerEvaluation,
@@ -42,6 +42,7 @@ interface AcademyState {
     prestige?: boolean
   ) => void;
   genererNotesPourNiveau: (groupeCle: string) => number;
+  organiserExamenPourNiveau: (groupeCle: string) => number;
 }
 
 /** Recalcule et met à jour l'entrée de moyenne trimestrielle d'un élève
@@ -265,6 +266,15 @@ export const useAcademyStore = create<AcademyState>()(
         const matieresGenerees = genererNotesPourNiveau(clone, groupeCle);
         set({ session: clone });
         return matieresGenerees;
+      },
+
+      organiserExamenPourNiveau: (groupeCle: string) => {
+        const { session } = get();
+        if (!session) return 0;
+        const clone: Session = JSON.parse(JSON.stringify(session));
+        const traites = organiserExamenPourNiveau(clone, groupeCle);
+        set({ session: clone });
+        return traites;
       },
     }),
     {

@@ -1,6 +1,12 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { useAcademyStore } from "@/lib/store/useAcademyStore";
+import {
+  listerGroupesNiveau,
+  statutNotationNiveau,
+  statutExamenNiveau,
+} from "@/lib/engines/simulation";
 
 const ETAPES = [
   { id: "T1", label: "Trimestre 1" },
@@ -20,15 +26,38 @@ const LIBELLE_ACTION: Record<string, string> = {
   annee_suivante: "Passer à l'année suivante",
 };
 
+function libelleEpreuve(libelleNiveau: string): string {
+  if (libelleNiveau === "3e") return "BEPC";
+  if (libelleNiveau === "Terminale") return "Bac";
+  return "Consolidation";
+}
+
 export default function TimelineControl() {
   const session = useAcademyStore((s) => s.session);
   const avancerEtape = useAcademyStore((s) => s.avancerEtape);
   const dernierResume = useAcademyStore((s) => s.dernierResume);
+  const genererNotesPourNiveau = useAcademyStore((s) => s.genererNotesPourNiveau);
+  const organiserExamenPourNiveau = useAcademyStore((s) => s.organiserExamenPourNiveau);
+  const [dernierClic, setDernierClic] = useState<string | null>(null);
+
+  const groupes = useMemo(() => (session ? listerGroupesNiveau(session) : []), [session]);
 
   if (!session) return null;
   const etapeActuelle = session.anneeCourante.etapeCourante;
   const idxActuel = ETAPES.findIndex((e) => e.id === etapeActuelle);
   const libelleActuel = ETAPES[idxActuel]?.label ?? etapeActuelle;
+  const surTrimestre = etapeActuelle === "T1" || etapeActuelle === "T2" || etapeActuelle === "T3";
+  const surExamen = etapeActuelle === "examen";
+
+  function generer(cle: string) {
+    genererNotesPourNiveau(cle);
+    setDernierClic(cle);
+  }
+
+  function examiner(cle: string) {
+    organiserExamenPourNiveau(cle);
+    setDernierClic(cle);
+  }
 
   return (
     <div className="border border-line bg-white/60 px-5 py-4">
@@ -69,6 +98,68 @@ export default function TimelineControl() {
       {dernierResume && (
         <div className="mt-4 border-l-2 border-gold bg-gold-soft/20 px-4 py-2.5 text-sm text-ink">
           {dernierResume}
+        </div>
+      )}
+
+      {surTrimestre && groupes.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-line">
+          <div className="text-[11px] uppercase tracking-wide text-slate mb-2">
+            Accès rapide — un bouton par niveau (Trimestre {session.anneeCourante.trimestreCourant})
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {groupes.map((g) => {
+              const statut = statutNotationNiveau(session, g);
+              const vientDetreClique = dernierClic === g.cle;
+              return (
+                <button
+                  key={g.cle}
+                  onClick={() => generer(g.cle)}
+                  title={`${g.classes.length} classe${g.classes.length > 1 ? "s" : ""} · ${g.nbEleves} élèves`}
+                  className={`text-xs px-3 py-1.5 border transition-colors ${
+                    statut === "complet"
+                      ? "border-forest text-forest bg-forest-soft/30"
+                      : statut === "partiel"
+                      ? "border-gold text-ink bg-gold-soft/30"
+                      : "border-line text-slate hover:border-ink hover:text-ink"
+                  } ${vientDetreClique ? "ring-1 ring-gold" : ""}`}
+                >
+                  {statut === "complet" ? "✓ " : ""}
+                  {g.libelle}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {surExamen && groupes.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-line">
+          <div className="text-[11px] uppercase tracking-wide text-slate mb-2">
+            Accès rapide — BEPC pour la 3e, Bac pour la Terminale, consolidation annuelle pour les autres
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {groupes.map((g) => {
+              const statut = statutExamenNiveau(session, g);
+              const vientDetreClique = dernierClic === g.cle;
+              return (
+                <button
+                  key={g.cle}
+                  onClick={() => examiner(g.cle)}
+                  title={`${g.classes.length} classe${g.classes.length > 1 ? "s" : ""} · ${g.nbEleves} élèves`}
+                  className={`text-xs px-3 py-1.5 border transition-colors ${
+                    statut === "complet"
+                      ? "border-forest text-forest bg-forest-soft/30"
+                      : statut === "partiel"
+                      ? "border-gold text-ink bg-gold-soft/30"
+                      : "border-line text-slate hover:border-ink hover:text-ink"
+                  } ${vientDetreClique ? "ring-1 ring-gold" : ""}`}
+                >
+                  {statut === "complet" ? "✓ " : ""}
+                  {libelleEpreuve(g.libelle)} — {g.libelle}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

@@ -111,6 +111,9 @@ export interface MoyenneTrimestre {
   rangClasse: number;
   rangEtablissement: number;
   rangGeneration: number;
+  examenTraite?: boolean;
+  pointsExamen?: number;
+  pointsExamenMax?: number;
 }
 
 export interface EvenementScolaire {

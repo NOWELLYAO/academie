@@ -10,6 +10,8 @@ interface LigneAnnuelle {
   rangGeneration: number;
   doublant: boolean;
   commentaires: string[];
+  pointsExamen?: number;
+  pointsExamenMax?: number;
 }
 
 function construireFiche(eleve: Eleve): LigneAnnuelle[] {
@@ -37,6 +39,8 @@ function construireFiche(eleve: Eleve): LigneAnnuelle[] {
       rangGeneration: derniere.rangGeneration,
       doublant,
       commentaires,
+      pointsExamen: derniere.pointsExamen,
+      pointsExamenMax: derniere.pointsExamenMax,
     });
   });
 
@@ -69,6 +73,7 @@ export default function FicheNotesComplete({ eleve }: { eleve: Eleve }) {
             <th>Année</th>
             <th>Classe suivie</th>
             <th>Moyenne</th>
+            <th>Examen</th>
             <th>Rang classe</th>
             <th>Rang génération</th>
             <th>Mention</th>
@@ -90,6 +95,15 @@ export default function FicheNotesComplete({ eleve }: { eleve: Eleve }) {
                   )}
                 </td>
                 <td className={couleurMoyenne(l.moyenne)}>{l.moyenne.toFixed(2)}</td>
+                <td className="tabular-nums whitespace-nowrap">
+                  {l.pointsExamenMax ? (
+                    <span title={l.pointsExamenMax === 360 ? "BEPC" : "Baccalauréat"}>
+                      {l.pointsExamen}/{l.pointsExamenMax} pts
+                    </span>
+                  ) : (
+                    <span className="text-slate">—</span>
+                  )}
+                </td>
                 <td className="tabular-nums">{l.rangClasse || "—"}</td>
                 <td className="tabular-nums">{l.rangGeneration || "—"}</td>
                 <td>

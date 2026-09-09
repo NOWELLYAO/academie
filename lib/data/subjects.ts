@@ -5,8 +5,8 @@ export const MATIERES: Matiere[] = [
     key: "mathematiques",
     nom: "Mathématiques",
     coefficientsParNiveau: {
-      "3e": 3, "2ndeC": 5, "2ndeA": 2, "1ereC": 6, "1ereD": 5, "1ereA": 1,
-      TermC: 7, TermD: 6, TermA: 1,
+      "3e": 4, "2ndeC": 5, "2ndeA": 2, "1ereC": 6, "1ereD": 5, "1ereA": 1,
+      TermC: 7, TermD: 5, TermA: 2,
       PrepaScientifique: 6, DUT: 3, Universite: 2, EcoleIngenieurs: 5,
     },
   },
@@ -22,15 +22,15 @@ export const MATIERES: Matiere[] = [
     key: "svt",
     nom: "SVT",
     coefficientsParNiveau: {
-      "3e": 2, "2ndeC": 2, "1ereD": 6, TermD: 7, Universite: 2,
+      "3e": 3, "2ndeC": 2, "1ereD": 6, TermD: 7, Universite: 2,
     },
   },
   {
     key: "francais",
     nom: "Français",
     coefficientsParNiveau: {
-      "3e": 3, "2ndeC": 3, "2ndeA": 4, "1ereC": 2, "1ereD": 2, "1ereA": 4,
-      TermC: 2, TermD: 2, TermA: 4,
+      "3e": 4, "2ndeC": 3, "2ndeA": 4, "1ereC": 2, "1ereD": 2, "1ereA": 4,
+      TermC: 2, TermD: 2, TermA: 6,
       PrepaLitteraire: 4, Universite: 2,
     },
   },
@@ -39,7 +39,7 @@ export const MATIERES: Matiere[] = [
     nom: "Anglais",
     coefficientsParNiveau: {
       "3e": 2, "2ndeC": 2, "2ndeA": 3, "1ereC": 2, "1ereD": 2, "1ereA": 3,
-      TermC: 2, TermD: 2, TermA: 3,
+      TermC: 2, TermD: 1, TermA: 5,
       PrepaScientifique: 1, PrepaLitteraire: 3, DUT: 2, Universite: 2, EcoleIngenieurs: 2,
     },
   },
@@ -55,7 +55,7 @@ export const MATIERES: Matiere[] = [
     key: "philosophie",
     nom: "Philosophie",
     coefficientsParNiveau: {
-      "2ndeA": 5, "1ereA": 5, TermA: 6,
+      "2ndeA": 5, "1ereA": 5, TermA: 7,
       PrepaLitteraire: 4, Universite: 1,
     },
   },

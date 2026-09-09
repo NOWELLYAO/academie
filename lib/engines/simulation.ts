@@ -1,5 +1,5 @@
 import { Classe, Eleve, Niveau, Session } from "../models/types";
-import { matieresDuNiveau } from "../data/subjects";
+import { genererNoteBrute } from "./potential";
 import { mulberry32, RNG } from "../utils/random";
 import {
   calculerMoyenneTrimestre,
@@ -17,7 +17,7 @@ import {
   orienterFinDe3e,
   orienterPostBac,
 } from "./orientation";
-import { NOM_NIVEAU, estPostBac } from "../data/subjects";
+import { NOM_NIVEAU, estPostBac, matieresDuNiveau, coefficient } from "../data/subjects";
 import { calculerMention, LIBELLE_MENTION } from "./mentions";
 import {
   crediterEleve,
@@ -138,44 +138,68 @@ function recalculerMoyenneTrimestreEleve(
 /** Génère les notes du trimestre en cours pour UNE SEULE classe (bouton
  * dédié par niveau/classe, y compris post-bac) et recalcule les moyennes
  * des élèves concernés. Ne touche à aucune autre classe. */
-/** Clé de regroupement par "niveau" au sens où l'utilisateur l'entend : un
- * niveau du secondaire (ex: "Seconde C", qui peut compter plusieurs
- * classes C1, C2...) ou une promotion post-bac précise (ex: "École
- * d'ingénieurs — 1ère année", jamais mélangée avec la 3e année). */
+/** Regroupement "grade" du secondaire, indépendant de la filière : Seconde
+ * A et Seconde C sont un seul et même niveau pour l'utilisateur, même si ce
+ * sont deux séries distinctes en interne (classes et matières séparées). */
+const GRADE_SECONDAIRE: Partial<Record<Niveau, string>> = {
+  "2ndeA": "Seconde",
+  "2ndeC": "Seconde",
+  "1ereA": "1ère",
+  "1ereC": "1ère",
+  "1ereD": "1ère",
+  TermA: "Terminale",
+  TermC: "Terminale",
+  TermD: "Terminale",
+};
+
+/** Clé de regroupement utilisée pour la COMPOSITION des classes (doit
+ * rester filière par filière : on ne mélange jamais 2ndeA et 2ndeC dans une
+ * même classe). Pour le post-bac, regroupe par promotion précise. */
 export function cleNiveauEleve(eleve: Eleve): string {
   return estPostBac(eleve.niveau) ? `${eleve.niveau}::${eleve.anneePostBac ?? 1}` : eleve.niveau;
 }
 
+/** Clé de regroupement utilisée pour les BOUTONS "par niveau" (Notes par
+ * niveau, tableau de bord) : ici on regroupe par niveau réel (3e, Seconde,
+ * 1ère, Terminale), toutes filières confondues — jamais par filière. Le
+ * post-bac reste groupé par promotion précise (programmes différents, pas
+ * de filières d'un même niveau à fusionner). */
+function cleBoutonNiveau(eleve: Eleve): string {
+  if (estPostBac(eleve.niveau)) return `${eleve.niveau}::${eleve.anneePostBac ?? 1}`;
+  return GRADE_SECONDAIRE[eleve.niveau] ?? eleve.niveau;
+}
+
 export interface GroupeNiveau {
   cle: string;
-  niveau: Niveau;
-  anneePostBac?: number;
   libelle: string;
+  estPostBac: boolean;
   classes: Classe[];
   nbEleves: number;
 }
 
 /** Liste tous les groupes de niveau actuellement scolarisés, chacun avec
  * ses classes rattachées — c'est cette liste qui alimente les boutons "par
- * niveau" (et non par classe) de la page Notes par niveau. */
+ * niveau" (et non par filière, et non par classe) de la page Notes par
+ * niveau et du tableau de bord. Un bouton "Seconde" couvre donc à la fois
+ * les classes de Seconde A et de Seconde C. */
 export function listerGroupesNiveau(session: Session): GroupeNiveau[] {
   const groupes = new Map<string, GroupeNiveau>();
 
   session.classes.forEach((classe) => {
     const eleveRef = session.eleves[classe.matricules[0]];
     if (!eleveRef) return;
-    const cle = cleNiveauEleve(eleveRef);
+    const cle = cleBoutonNiveau(eleveRef);
+    const postBac = estPostBac(eleveRef.niveau);
 
     if (!groupes.has(cle)) {
-      const anneePostBac = estPostBac(eleveRef.niveau) ? eleveRef.anneePostBac ?? 1 : undefined;
+      const anneePostBac = postBac ? eleveRef.anneePostBac ?? 1 : undefined;
       const libelle = anneePostBac
         ? `${NOM_NIVEAU[eleveRef.niveau]} — ${anneePostBac === 1 ? "1ère" : `${anneePostBac}e`} année`
-        : NOM_NIVEAU[eleveRef.niveau];
+        : GRADE_SECONDAIRE[eleveRef.niveau] ?? NOM_NIVEAU[eleveRef.niveau];
       groupes.set(cle, {
         cle,
-        niveau: eleveRef.niveau,
-        anneePostBac,
         libelle,
+        estPostBac: postBac,
         classes: [],
         nbEleves: 0,
       });
@@ -217,6 +241,29 @@ export function statutNotationNiveau(session: Session, groupe: GroupeNiveau): St
 
   if (presentes === 0) return "aucun";
   if (presentes >= attendues) return "complet";
+  return "partiel";
+}
+
+/** Même principe que statutNotationNiveau, mais pour l'étape Examen : indique
+ * si les élèves d'un niveau ont déjà leur épreuve (BEPC/Bac) ou leur
+ * consolidation annuelle traitée. */
+export function statutExamenNiveau(session: Session, groupe: GroupeNiveau): StatutNotation {
+  let total = 0;
+  let traites = 0;
+
+  groupe.classes.forEach((classe) => {
+    classe.matricules.forEach((matricule) => {
+      const eleve = session.eleves[matricule];
+      if (!eleve || !estScolarise(eleve.statut)) return;
+      const derniere = eleve.moyennes[eleve.moyennes.length - 1];
+      if (!derniere || derniere.annee !== session.anneeCourante.libelle) return;
+      total++;
+      if (derniere.examenTraite) traites++;
+    });
+  });
+
+  if (traites === 0) return "aucun";
+  if (traites >= total) return "complet";
   return "partiel";
 }
 
@@ -328,30 +375,96 @@ function moyenneAnnuelleTrimestres(eleve: Eleve, annee: string): number {
  * contrôle continu et une épreuve finale. Les autres niveaux (Seconde,
  * Première) ne passent aucun examen national : leur résultat de fin
  * d'année est simplement la moyenne annuelle des 3 trimestres. */
+/** Applique l'épreuve d'examen (BEPC/Bac) ou la consolidation de moyenne
+ * annuelle pour UN élève. Idempotent : si cet élève a déjà été traité cette
+ * année (via un bouton par niveau ou un appel précédent), il est ignoré. */
+/** Traite l'examen (BEPC/Bac) ou la consolidation annuelle d'UN élève,
+ * avec un vrai barème à points :
+ *  - chaque matière est notée séparément sur 20, avec son propre aléa ;
+ *  - les points de chaque matière (note × coefficient) sont additionnés,
+ *    pour un total sur 360 (BEPC, 3e) ou 400 (Bac, toutes séries) ;
+ *  - la moyenne d'examen équivalente sur 20 est ce total divisé par la
+ *    somme des coefficients ;
+ *  - la moyenne d'orientation combine ensuite examen (poids 2) et moyenne
+ *    de classe annuelle (poids 1) : (examen×2 + classe×1) / 3.
+ * Idempotent : un élève déjà traité cette année n'est jamais repris. */
+function traiterExamenEleve(session: Session, eleve: Eleve, rng: RNG): void {
+  const derniere = eleve.moyennes[eleve.moyennes.length - 1];
+  if (!derniere || derniere.annee !== session.anneeCourante.libelle) return;
+  if (derniere.examenTraite) return; // déjà traité — on ne reprend pas deux fois
+
+  const moyenneClasse = moyenneAnnuelleTrimestres(eleve, session.anneeCourante.libelle);
+  let moyenneFinale = moyenneClasse;
+
+  if (estNiveauExamen(eleve.niveau)) {
+    const matieres = matieresDuNiveau(eleve.niveau);
+    let totalPoints = 0;
+    let totalCoefficients = 0;
+
+    matieres.forEach((matiere) => {
+      const coeff = coefficient(matiere.key, eleve.niveau);
+      // Réutilise le moteur de cohérence des notes normales (plancher lié à
+      // la compétence réelle, volatilité propre à l'élève, et possibilité
+      // de "coup d'éclat" porté par le potentiel caché) — un examen est
+      // légèrement plus exigeant qu'une évaluation ordinaire (1.15), mais
+      // reste tiré par le même mécanisme, jamais un aléa déconnecté du
+      // niveau réel de l'élève en classe.
+      const noteEpreuve = genererNoteBrute(rng, eleve, matiere.key, 1.15);
+      totalPoints += noteEpreuve * coeff;
+      totalCoefficients += coeff;
+    });
+
+    const pointsMax = totalCoefficients * 20; // 360 (BEPC) ou 400 (Bac)
+    const noteExamenSur20 = totalCoefficients > 0 ? totalPoints / totalCoefficients : 0;
+
+    // Moyenne d'orientation : examen pondéré ×2, moyenne de classe ×1
+    moyenneFinale = Math.round(((noteExamenSur20 * 2 + moyenneClasse * 1) / 3) * 100) / 100;
+
+    derniere.pointsExamen = Math.round(totalPoints * 10) / 10;
+    derniere.pointsExamenMax = pointsMax;
+  }
+
+  eleve.competences.progression = calculerIndicateurProgression(eleve);
+  derniere.moyenneGenerale = moyenneFinale;
+  derniere.examenTraite = true;
+}
+
+/** Organise l'examen (BEPC/Bac ou consolidation annuelle) pour UN SEUL
+ * niveau (ex: uniquement la 3e, ou uniquement la Terminale) — bouton dédié
+ * par niveau. Ne fait pas avancer l'étape globale de la timeline : c'est le
+ * bouton global "Organiser les examens" qui, une fois tous les niveaux
+ * couverts (individuellement ou en bloc), fait passer à l'orientation. */
+export function organiserExamenPourNiveau(session: Session, groupeCle: string): number {
+  const groupe = listerGroupesNiveau(session).find((g) => g.cle === groupeCle);
+  if (!groupe) return 0;
+
+  const rng = rngDeSession(session, `EXAMEN-${groupeCle}-${session.anneeCourante.libelle}`);
+  let traites = 0;
+
+  groupe.classes.forEach((classe) => {
+    classe.matricules.forEach((matricule) => {
+      const eleve = session.eleves[matricule];
+      if (!eleve || !estScolarise(eleve.statut)) return;
+      const derniere = eleve.moyennes[eleve.moyennes.length - 1];
+      if (derniere?.examenTraite) return;
+      traiterExamenEleve(session, eleve, rng);
+      traites++;
+    });
+  });
+
+  return traites;
+}
+
+/** Organise l'examen de fin d'année pour TOUTE la génération (bouton
+ * global) : BEPC pour la 3e, Baccalauréat pour la Terminale, consolidation
+ * de la moyenne annuelle pour les autres niveaux. Idempotent — les niveaux
+ * déjà traités individuellement via leur bouton dédié ne sont pas repris. */
 export function simulerExamen(session: Session): void {
   const rng = rngDeSession(session, `EXAMEN-${session.anneeCourante.libelle}`);
 
   Object.values(session.eleves).forEach((eleve) => {
     if (!estScolarise(eleve.statut)) return;
-
-    const moyenneAnnuelle = moyenneAnnuelleTrimestres(eleve, session.anneeCourante.libelle);
-    let moyenneFinale = moyenneAnnuelle;
-
-    if (estNiveauExamen(eleve.niveau)) {
-      // Note d'examen influencée par la compétence moyenne + un facteur de stress aléatoire
-      const matieres = matieresDuNiveau(eleve.niveau);
-      const moyennesMatieres = matieres.map((m) => eleve.competences[m.key] ?? 10);
-      const moyenneCompetences = moyennesMatieres.reduce((a, b) => a + b, 0) / moyennesMatieres.length;
-      const stress = (rng() - 0.5) * 2 * (1 - eleve.potentiel.resilience) * 2;
-      const noteExamen = Math.max(0, Math.min(20, moyenneCompetences + stress));
-
-      // Pondération classique : 60% contrôle continu annuel, 40% épreuve finale
-      moyenneFinale = Math.round((moyenneAnnuelle * 0.6 + noteExamen * 0.4) * 100) / 100;
-    }
-
-    eleve.competences.progression = calculerIndicateurProgression(eleve);
-    const derniere = eleve.moyennes[eleve.moyennes.length - 1];
-    if (derniere) derniere.moyenneGenerale = moyenneFinale;
+    traiterExamenEleve(session, eleve, rng);
   });
 
   session.anneeCourante.etapeCourante = "orientation";

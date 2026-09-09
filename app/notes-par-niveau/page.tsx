@@ -4,15 +4,14 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useAcademyStore } from "@/lib/store/useAcademyStore";
 import PageHeader from "@/components/PageHeader";
-import { listerGroupesNiveau, statutNotationNiveau } from "@/lib/engines/simulation";
-import { estPostBac } from "@/lib/data/subjects";
+import { listerGroupesNiveau, statutNotationNiveau, GroupeNiveau } from "@/lib/engines/simulation";
 
-const GROUPES_AFFICHAGE: { label: string; test: (niveau: string) => boolean }[] = [
-  { label: "Collège", test: (n) => n === "3e" },
-  { label: "Seconde", test: (n) => n.startsWith("2nde") },
-  { label: "Première", test: (n) => n.startsWith("1ere") },
-  { label: "Terminale", test: (n) => n.startsWith("Term") },
-  { label: "Cycle supérieur (post-bac)", test: (n) => estPostBac(n as never) },
+const GROUPES_AFFICHAGE: { label: string; test: (g: GroupeNiveau) => boolean }[] = [
+  { label: "Collège", test: (g) => g.libelle === "3e" },
+  { label: "Seconde", test: (g) => g.libelle === "Seconde" },
+  { label: "Première", test: (g) => g.libelle === "1ère" },
+  { label: "Terminale", test: (g) => g.libelle === "Terminale" },
+  { label: "Cycle supérieur (post-bac)", test: (g) => g.estPostBac },
 ];
 
 export default function NotesParNiveauPage() {
@@ -59,7 +58,7 @@ export default function NotesParNiveauPage() {
 
       <div className="space-y-10">
         {GROUPES_AFFICHAGE.map((section) => {
-          const groupesSection = groupes.filter((g) => section.test(g.niveau));
+          const groupesSection = groupes.filter((g) => section.test(g));
           if (groupesSection.length === 0) return null;
 
           return (
