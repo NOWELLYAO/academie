@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useAcademyStore } from "@/lib/store/useAcademyStore";
 import PageHeader from "@/components/PageHeader";
-import { listerGroupesNiveau } from "@/lib/engines/simulation";
+import { listerGroupesNiveau, statutNotationNiveau } from "@/lib/engines/simulation";
 import { estPostBac } from "@/lib/data/subjects";
 
 const GROUPES_AFFICHAGE: { label: string; test: (niveau: string) => boolean }[] = [
@@ -66,28 +66,48 @@ export default function NotesParNiveauPage() {
             <div key={section.label}>
               <h2 className="font-display text-lg text-ink mb-3">{section.label}</h2>
               <div className="space-y-2">
-                {groupesSection.map((g) => (
-                  <div
-                    key={g.cle}
-                    className="border border-line bg-white/60 px-5 py-3 flex items-center justify-between flex-wrap gap-3"
-                  >
-                    <div>
-                      <div className="text-sm font-medium text-ink">{g.libelle}</div>
-                      <div className="text-xs text-slate mt-0.5">
-                        {g.classes.length} classe{g.classes.length > 1 ? "s" : ""} · {g.nbEleves} élèves
-                        {messages[g.cle] && (
-                          <span className="text-gold ml-2">— {messages[g.cle]}</span>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => generer(g.cle)}
-                      className="bg-ink text-paper px-4 py-2 text-sm hover:bg-ink-soft transition-colors shrink-0"
+                {groupesSection.map((g) => {
+                  const statut = statutNotationNiveau(session, g);
+                  return (
+                    <div
+                      key={g.cle}
+                      className="border border-line bg-white/60 px-5 py-3 flex items-center justify-between flex-wrap gap-3"
                     >
-                      🎲 Générer les notes — {g.libelle}
-                    </button>
-                  </div>
-                ))}
+                      <div>
+                        <div className="text-sm font-medium text-ink flex items-center gap-2">
+                          {g.libelle}
+                          {statut === "complet" && (
+                            <span className="text-[10px] border border-forest text-forest px-1.5 py-0.5 bg-forest-soft/40">
+                              ✓ Trimestre {trimestre} déjà noté
+                            </span>
+                          )}
+                          {statut === "partiel" && (
+                            <span className="text-[10px] border border-gold text-ink px-1.5 py-0.5 bg-gold-soft/40">
+                              ◐ Partiellement noté
+                            </span>
+                          )}
+                          {statut === "aucun" && (
+                            <span className="text-[10px] border border-line text-slate px-1.5 py-0.5">
+                              ○ Pas encore noté
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-slate mt-0.5">
+                          {g.classes.length} classe{g.classes.length > 1 ? "s" : ""} · {g.nbEleves} élèves
+                          {messages[g.cle] && (
+                            <span className="text-gold ml-2">— {messages[g.cle]}</span>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => generer(g.cle)}
+                        className="bg-ink text-paper px-4 py-2 text-sm hover:bg-ink-soft transition-colors shrink-0"
+                      >
+                        🎲 Générer les notes — {g.libelle}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );

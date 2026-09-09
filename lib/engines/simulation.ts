@@ -188,6 +188,38 @@ export function listerGroupesNiveau(session: Session): GroupeNiveau[] {
   return Array.from(groupes.values()).sort((a, b) => a.libelle.localeCompare(b.libelle));
 }
 
+export type StatutNotation = "complet" | "partiel" | "aucun";
+
+/** Indique, AVANT tout clic, si un niveau a déjà toutes ses évaluations du
+ * trimestre en cours ("complet"), aucune ("aucun"), ou seulement certaines
+ * classes/matières ("partiel") — pour que l'état soit visible sans avoir à
+ * cliquer pour le découvrir. */
+export function statutNotationNiveau(session: Session, groupe: GroupeNiveau): StatutNotation {
+  const trimestre = session.anneeCourante.trimestreCourant;
+  const annee = session.anneeCourante.libelle;
+  let attendues = 0;
+  let presentes = 0;
+
+  groupe.classes.forEach((classe) => {
+    const matieres = matieresDuNiveau(classe.niveau);
+    matieres.forEach((matiere) => {
+      attendues++;
+      const existe = session.evaluations.some(
+        (ev) =>
+          ev.classeId === classe.id &&
+          ev.matiere === matiere.key &&
+          ev.trimestre === trimestre &&
+          ev.annee === annee
+      );
+      if (existe) presentes++;
+    });
+  });
+
+  if (presentes === 0) return "aucun";
+  if (presentes >= attendues) return "complet";
+  return "partiel";
+}
+
 /** Génère les notes du trimestre en cours pour TOUTES les classes d'un même
  * niveau en un seul clic (ex: les 6 classes de Seconde C d'un coup) — et
  * pour rien d'autre. Idempotent : ne duplique jamais un travail déjà fait. */
