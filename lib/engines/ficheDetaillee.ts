@@ -10,18 +10,29 @@ export interface CelluleMatiereTrimestre {
   totalNiveau: number;
 }
 
+export interface CelluleExamen {
+  note: number;
+  rangClasse: number | null;
+  totalClasse: number;
+  rangNiveau: number | null;
+  totalNiveau: number;
+}
+
 export interface LigneMatiereDetaillee {
   matiere: SubjectKey;
   nom: string;
   coefficient: number;
   parTrimestre: CelluleMatiereTrimestre[];
   moyenneAnnuelle: number | null;
+  examen: CelluleExamen | null;
 }
 
 export interface AnneeDetaillee {
   annee: string;
   niveau: string;
   classeNom: string;
+  estExamen: boolean;
+  libelleExamen: string | null;
   lignes: LigneMatiereDetaillee[];
 }
 
@@ -72,6 +83,30 @@ function rangDansGroupe(
   return { rang: idx === -1 ? null : idx + 1, total: candidats.length };
 }
 
+/** Comme rangDansGroupe, mais pour la note d'examen (BEPC/Bac/session
+ * post-bac) — un seul point par élève et par année, pas par trimestre. */
+function rangExamenDansGroupe(
+  session: Session,
+  matricule: string,
+  matiere: SubjectKey,
+  annee: string,
+  appartientAuGroupe: (entree: MoyenneTrimestre) => boolean
+): { rang: number | null; total: number } {
+  const candidats = Object.values(session.eleves)
+    .map((e) => {
+      const entreesAnnee = e.moyennes.filter((m) => m.annee === annee).sort((a, b) => a.trimestre - b.trimestre);
+      const entree = entreesAnnee[entreesAnnee.length - 1];
+      if (!entree || !entree.pointsExamenMax || !appartientAuGroupe(entree)) return null;
+      const mm = entree.parMatiere.find((p) => p.matiere === matiere);
+      return mm && mm.noteExamen !== undefined ? { matricule: e.matricule, note: mm.noteExamen } : null;
+    })
+    .filter((x): x is { matricule: string; note: number } => x !== null)
+    .sort((a, b) => b.note - a.note);
+
+  const idx = candidats.findIndex((c) => c.matricule === matricule);
+  return { rang: idx === -1 ? null : idx + 1, total: candidats.length };
+}
+
 /** Construit la fiche détaillée (toutes matières, tous trimestres, avec
  * rangs classe et niveau) d'un élève pour UNE année scolaire donnée. */
 export function construireAnneeDetaillee(
@@ -85,6 +120,8 @@ export function construireAnneeDetaillee(
   const derniere = entrees[entrees.length - 1];
   const classeNom = derniere.classeNom;
   const niveau = derniere.niveau;
+  const estExamen = !!derniere.pointsExamenMax;
+  const libelleExamen = derniere.pointsExamenMax === 360 ? "BEPC" : derniere.pointsExamenMax === 400 ? "Bac" : estExamen ? "Session" : null;
 
   const matieresPresentes = new Set<SubjectKey>();
   entrees.forEach((e) => e.parMatiere.forEach((p) => matieresPresentes.add(p.matiere)));
@@ -118,15 +155,32 @@ export function construireAnneeDetaillee(
         }
       });
 
+      const mmDerniere = derniere.parMatiere.find((p) => p.matiere === m.key);
+      const examen =
+        estExamen && mmDerniere?.noteExamen !== undefined
+          ? (() => {
+              const rc = rangExamenDansGroupe(session, eleve.matricule, m.key, annee, (e) => e.classeNom === classeNom);
+              const rn = rangExamenDansGroupe(session, eleve.matricule, m.key, annee, (e) => e.niveau === niveau);
+              return {
+                note: mmDerniere.noteExamen!,
+                rangClasse: rc.rang,
+                totalClasse: rc.total,
+                rangNiveau: rn.rang,
+                totalNiveau: rn.total,
+              };
+            })()
+          : null;
+
       return {
         matiere: m.key,
         nom: m.nom,
         coefficient: derniere.parMatiere.find((p) => p.matiere === m.key)?.coefficient ?? 1,
         parTrimestre,
         moyenneAnnuelle: totalPoids > 0 ? Math.round((totalPondere / totalPoids) * 100) / 100 : null,
+        examen,
       };
     }
   );
 
-  return { annee, niveau, classeNom, lignes };
+  return { annee, niveau, classeNom, estExamen, libelleExamen, lignes };
 }

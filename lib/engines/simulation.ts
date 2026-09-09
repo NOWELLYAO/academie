@@ -448,6 +448,9 @@ function traiterExamenEleve(session: Session, eleve: Eleve, rng: RNG): void {
       const noteEpreuve = genererNoteBrute(rng, eleve, matiere.key, 1.15);
       totalPoints += noteEpreuve * coeff;
       totalCoefficients += coeff;
+
+      const entreeMatiere = derniere.parMatiere.find((p) => p.matiere === matiere.key);
+      if (entreeMatiere) entreeMatiere.noteExamen = noteEpreuve;
     });
 
     const pointsMax = totalCoefficients * 20; // 360 (BEPC) ou 400 (Bac)

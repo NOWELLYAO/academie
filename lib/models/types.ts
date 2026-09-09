@@ -99,6 +99,7 @@ export interface MoyenneMatiere {
   matiere: SubjectKey;
   moyenne: number;
   coefficient: number;
+  noteExamen?: number;
 }
 
 export interface MoyenneTrimestre {

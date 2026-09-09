@@ -83,6 +83,7 @@ export default function FicheDetailleeParNiveau({
                 <th>Trimestre 1</th>
                 <th>Trimestre 2</th>
                 <th>Trimestre 3</th>
+                {fiche?.estExamen && <th>{fiche.libelleExamen ?? "Examen"}</th>}
                 <th>Moy. annuelle</th>
               </tr>
             </thead>
@@ -114,6 +115,28 @@ export default function FicheDetailleeParNiveau({
                       )}
                     </td>
                   ))}
+                  {fiche.estExamen && (
+                    <td>
+                      {ligne.examen === null ? (
+                        <span className="text-slate">—</span>
+                      ) : (
+                        <div>
+                          <span className={couleurNote(ligne.examen.note)}>
+                            {ligne.examen.note.toFixed(2)}
+                          </span>
+                          <div className="text-[11px] text-slate mt-0.5 whitespace-nowrap">
+                            <span className="inline-flex items-center">
+                              {ligne.examen.rangClasse}
+                              {ligne.examen.rangClasse && <RangBadge rang={ligne.examen.rangClasse} />}
+                              /{ligne.examen.totalClasse} classe
+                            </span>
+                            <br />
+                            {ligne.examen.rangNiveau}/{ligne.examen.totalNiveau} niveau
+                          </div>
+                        </div>
+                      )}
+                    </td>
+                  )}
                   <td className={`font-semibold ${couleurNote(ligne.moyenneAnnuelle)}`}>
                     {ligne.moyenneAnnuelle !== null ? ligne.moyenneAnnuelle.toFixed(2) : "—"}
                   </td>
@@ -125,7 +148,8 @@ export default function FicheDetailleeParNiveau({
       )}
       <p className="text-[11px] text-slate mt-2">
         Moyenne annuelle par matière pondérée T1×1, T2×2, T3×2 — cohérente avec la moyenne
-        générale. Rangs calculés au sein de la classe suivie et de l&apos;ensemble du niveau.
+        générale. Rangs calculés au sein de la classe suivie et de l&apos;ensemble du niveau
+        {fiche?.estExamen ? `, y compris pour la note à l'épreuve (${fiche.libelleExamen}).` : "."}
       </p>
     </div>
   );
