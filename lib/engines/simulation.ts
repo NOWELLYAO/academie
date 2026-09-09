@@ -664,9 +664,19 @@ function recomposerClasses(session: Session): void {
         ? `${NOM_NIVEAU[niveau]} — ${anneePostBacGroupe === 1 ? "1ère" : `${anneePostBacGroupe}e`} année`
         : NOM_NIVEAU[niveau];
 
+      // Jamais le mot "groupe" dans un nom de classe : le numéro est
+      // accolé directement (ex: "Seconde C1", "1ère C2") pour le secondaire,
+      // ou ajouté simplement en fin pour le post-bac (ex: "Université — 2e année 2").
+      const nom =
+        nbClasses > 1
+          ? anneePostBacGroupe
+            ? `${baseNom} ${i + 1}`
+            : `${baseNom}${i + 1}`
+          : baseNom;
+
       nouvellesClasses.push({
         id,
-        nom: nbClasses > 1 ? `${baseNom} (groupe ${i + 1})` : baseNom,
+        nom,
         niveau,
         matricules: membres.map((e) => e.matricule),
         annee: session.anneeCourante.libelle,
