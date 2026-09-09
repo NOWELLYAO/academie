@@ -19,13 +19,18 @@ export function construireResumeEtape(
     case "T3": {
       const n = etapeAvant.slice(1);
       const actifs = Object.values(apres.eleves).filter(
-        (e) => e.statut === "actif" || e.statut === "redoublant"
+        (e) => e.statut === "actif" || e.statut === "redoublant" || e.statut === "universite"
       ).length;
-      return `Trimestre ${n} simulé pour ${actifs} élèves — évaluations générées, moyennes et classements recalculés.`;
+      return (
+        `Trimestre ${n} simulé pour ${actifs} élèves — du collège au cycle supérieur (post-bac inclus). ` +
+        `Seules les classes sans notes pour ce trimestre ont été complétées automatiquement ; ` +
+        `si vous avez déjà géré une classe manuellement, elle n'a pas été modifiée.`
+      );
     }
 
     case "examen": {
-      const enVie = (e: (typeof avant.eleves)[string]) => e.statut === "actif" || e.statut === "redoublant";
+      const enVie = (e: (typeof avant.eleves)[string]) =>
+        e.statut === "actif" || e.statut === "redoublant" || e.statut === "universite";
       const n3e = Object.values(avant.eleves).filter((e) => e.niveau === "3e" && enVie(e)).length;
       const nTerm = Object.values(avant.eleves).filter(
         (e) => (e.niveau === "TermA" || e.niveau === "TermC" || e.niveau === "TermD") && enVie(e)
@@ -35,8 +40,8 @@ export function construireResumeEtape(
       ).length;
       return (
         `Épreuves de fin d'année : BEPC pour ${n3e} élèves de 3e, Baccalauréat pour ${nTerm} ` +
-        `élèves de Terminale. Les ${autres} élèves de Seconde/Première n'ont pas d'examen national ` +
-        `— leur résultat est la moyenne annuelle de contrôle continu.`
+        `élèves de Terminale. Les ${autres} autres élèves (Seconde, Première, et tout le cycle ` +
+        `post-bac) n'ont pas d'examen national — leur résultat est la moyenne annuelle de contrôle continu.`
       );
     }
 

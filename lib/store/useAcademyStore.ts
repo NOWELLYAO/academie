@@ -4,7 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { EvaluationDef, Session, SubjectKey } from "../models/types";
 import { genererSession } from "../engines/generation";
-import { etapeSuivante } from "../engines/simulation";
+import { etapeSuivante, genererNotesPourClasse } from "../engines/simulation";
 import {
   calculerMoyenneTrimestre,
   creerEvaluation,
@@ -40,6 +40,7 @@ interface AcademyState {
     niveaux: string[] | null,
     niveauLibelle: string
   ) => void;
+  genererNotesPourClasse: (classeId: string) => number;
 }
 
 /** Recalcule et met à jour l'entrée de moyenne trimestrielle d'un élève
@@ -186,7 +187,7 @@ export const useAcademyStore = create<AcademyState>()(
         const clone: Session = JSON.parse(JSON.stringify(session));
 
         const eligibles = Object.values(clone.eleves).filter((e) => {
-          if (e.statut !== "actif" && e.statut !== "redoublant") return false;
+          if (e.statut !== "actif" && e.statut !== "redoublant" && e.statut !== "universite") return false;
           if (niveaux && !niveaux.includes(e.niveau)) return false;
           return true;
         });
@@ -224,6 +225,15 @@ export const useAcademyStore = create<AcademyState>()(
         });
 
         set({ session: clone });
+      },
+
+      genererNotesPourClasse: (classeId: string) => {
+        const { session } = get();
+        if (!session) return 0;
+        const clone: Session = JSON.parse(JSON.stringify(session));
+        const matieresGenerees = genererNotesPourClasse(clone, classeId);
+        set({ session: clone });
+        return matieresGenerees;
       },
     }),
     {

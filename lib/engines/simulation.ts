@@ -1,4 +1,4 @@
-import { Classe, Eleve, MoyenneTrimestre, Niveau, Session } from "../models/types";
+import { Classe, Eleve, Niveau, Session } from "../models/types";
 import { matieresDuNiveau } from "../data/subjects";
 import { mulberry32, RNG } from "../utils/random";
 import {
@@ -17,7 +17,7 @@ import {
   orienterFinDe3e,
   orienterPostBac,
 } from "./orientation";
-import { NOM_NIVEAU } from "../data/subjects";
+import { NOM_NIVEAU, estPostBac } from "../data/subjects";
 import { calculerMention, LIBELLE_MENTION } from "./mentions";
 import {
   crediterEleve,
@@ -35,67 +35,156 @@ function rngDeSession(session: Session, sel: string): RNG {
   return mulberry32(hash);
 }
 
-/** Génère automatiquement un jeu d'évaluations réalistes pour un trimestre. */
+/** Un élève "scolarisé" cette année reçoit des notes et progresse — cela
+ * inclut désormais le post-bac (statut "universite"), qui suit exactement
+ * le même moteur de notes que le secondaire. */
+function estScolarise(statut: Eleve["statut"]): boolean {
+  return statut === "actif" || statut === "redoublant" || statut === "universite";
+}
+
+/** Génère les évaluations d'une classe pour un trimestre donné, matière par
+ * matière. N'écrase jamais un travail déjà fait : si une matière a déjà des
+ * évaluations pour ce trimestre (saisie manuelle ou génération précédente),
+ * elle est ignorée. Utilisable pour UNE classe isolée (bouton par niveau)
+ * ou en boucle pour tout l'établissement (bouton global). */
+export function genererEvaluationsClasseTrimestre(
+  session: Session,
+  classe: Classe,
+  trimestre: 1 | 2 | 3,
+  rng: RNG
+): number {
+  const matieres = matieresDuNiveau(classe.niveau);
+  let matieresGenerees = 0;
+
+  matieres.forEach((matiere) => {
+    const dejaTraitee = session.evaluations.some(
+      (ev) =>
+        ev.classeId === classe.id &&
+        ev.matiere === matiere.key &&
+        ev.trimestre === trimestre &&
+        ev.annee === session.anneeCourante.libelle
+    );
+    if (dejaTraitee) return; // on ne reprend pas un travail déjà fait pour cette classe
+
+    // 2 à 4 évaluations par matière et par trimestre
+    const nbEvals = 2 + Math.floor(rng() * 3);
+    for (let i = 0; i < nbEvals; i++) {
+      const type = i === nbEvals - 1 ? "controle" : "devoir";
+      const evaluation = creerEvaluation(
+        classe.id,
+        matiere.key,
+        type,
+        20,
+        1,
+        trimestre,
+        session.anneeCourante.libelle
+      );
+      genererNotesAutomatiques(rng, session, evaluation, classe);
+      session.evaluations.push(evaluation);
+    }
+    matieresGenerees++;
+  });
+
+  return matieresGenerees;
+}
+
+/** Recalcule la moyenne trimestrielle d'un élève à partir de ses notes
+ * actuelles pour ce trimestre (sans changer son niveau ni son statut). */
+function recalculerMoyenneTrimestreEleve(
+  session: Session,
+  eleve: Eleve,
+  trimestre: 1 | 2 | 3
+): void {
+  const { parMatiere, moyenneGenerale } = calculerMoyenneTrimestre(
+    eleve,
+    trimestre,
+    session.anneeCourante.libelle
+  );
+  let entree = eleve.moyennes.find(
+    (m) => m.trimestre === trimestre && m.annee === session.anneeCourante.libelle
+  );
+  if (!entree) {
+    entree = {
+      trimestre,
+      annee: session.anneeCourante.libelle,
+      niveau: eleve.niveau,
+      parMatiere: [],
+      moyenneGenerale: 0,
+      rangClasse: 0,
+      rangEtablissement: 0,
+      rangGeneration: 0,
+    };
+    eleve.moyennes.push(entree);
+    calculerIndicateurProgression(eleve);
+  }
+  entree.parMatiere = parMatiere;
+  entree.moyenneGenerale = moyenneGenerale;
+
+  const mention = calculerMention(moyenneGenerale);
+  if (mention) {
+    crediterEleve(
+      eleve,
+      MONTANTS_MENTION[mention],
+      `Mention "${LIBELLE_MENTION[mention]}" — T${trimestre}`,
+      session.anneeCourante.libelle,
+      trimestre
+    );
+  }
+}
+
+/** Génère les notes du trimestre en cours pour UNE SEULE classe (bouton
+ * dédié par niveau/classe, y compris post-bac) et recalcule les moyennes
+ * des élèves concernés. Ne touche à aucune autre classe. */
+export function genererNotesPourClasse(session: Session, classeId: string): number {
+  const classe = session.classes.find((c) => c.id === classeId);
+  if (!classe) return 0;
+  const trimestre = session.anneeCourante.trimestreCourant;
+  const rng = rngDeSession(session, `CLASSE-${classeId}-T${trimestre}-${session.anneeCourante.libelle}`);
+
+  const matieresGenerees = genererEvaluationsClasseTrimestre(session, classe, trimestre, rng);
+
+  classe.matricules.forEach((matricule) => {
+    const eleve = session.eleves[matricule];
+    if (eleve) recalculerMoyenneTrimestreEleve(session, eleve, trimestre);
+  });
+
+  // Reclassement (au sein de la classe et de la génération) pour rester cohérent
+  const classementClasse = classerClasse(session, classe.id);
+  classementClasse.forEach((entree) => {
+    const eleve = session.eleves[entree.matricule];
+    const derniere = eleve?.moyennes[eleve.moyennes.length - 1];
+    if (derniere && derniere.trimestre === trimestre) derniere.rangClasse = entree.rang;
+  });
+
+  const classementGeneration = classerGeneration(session);
+  classementGeneration.forEach((entree) => {
+    const eleve = session.eleves[entree.matricule];
+    const derniere = eleve?.moyennes[eleve.moyennes.length - 1];
+    if (derniere && derniere.trimestre === trimestre) {
+      derniere.rangGeneration = entree.rang;
+      derniere.rangEtablissement = entree.rang;
+    }
+  });
+
+  return matieresGenerees;
+}
+
+/** Génère automatiquement un jeu d'évaluations réalistes pour un trimestre,
+ * pour toutes les classes de l'établissement (bouton global du tableau de
+ * bord). N'écrase jamais un travail déjà fait classe par classe. */
 export function simulerTrimestre(session: Session, trimestre: 1 | 2 | 3): void {
   const rng = rngDeSession(session, `T${trimestre}-${session.anneeCourante.libelle}`);
 
   session.classes.forEach((classe) => {
     const eleveRef = session.eleves[classe.matricules[0]];
     if (!eleveRef) return;
-    const matieres = matieresDuNiveau(classe.niveau);
-
-    matieres.forEach((matiere) => {
-      // 2 à 4 évaluations par matière et par trimestre
-      const nbEvals = 2 + Math.floor(rng() * 3);
-      for (let i = 0; i < nbEvals; i++) {
-        const type = i === nbEvals - 1 ? "controle" : "devoir";
-        const evaluation = creerEvaluation(
-          classe.id,
-          matiere.key,
-          type,
-          20,
-          1,
-          trimestre,
-          session.anneeCourante.libelle
-        );
-        genererNotesAutomatiques(rng, session, evaluation, classe);
-        session.evaluations.push(evaluation);
-      }
-    });
+    genererEvaluationsClasseTrimestre(session, classe, trimestre, rng);
   });
 
   // Calcul des moyennes trimestrielles pour chaque élève
   Object.values(session.eleves).forEach((eleve) => {
-    if (eleve.statut !== "actif" && eleve.statut !== "redoublant") return;
-    const { parMatiere, moyenneGenerale } = calculerMoyenneTrimestre(
-      eleve,
-      trimestre,
-      session.anneeCourante.libelle
-    );
-    const moyenne: MoyenneTrimestre = {
-      trimestre,
-      annee: session.anneeCourante.libelle,
-      niveau: eleve.niveau,
-      parMatiere,
-      moyenneGenerale,
-      rangClasse: 0,
-      rangEtablissement: 0,
-      rangGeneration: 0,
-    };
-    eleve.moyennes.push(moyenne);
-    calculerIndicateurProgression(eleve);
-
-    // Récompense de mérite liée à la mention du trimestre
-    const mention = calculerMention(moyenneGenerale);
-    if (mention) {
-      crediterEleve(
-        eleve,
-        MONTANTS_MENTION[mention],
-        `Mention "${LIBELLE_MENTION[mention]}" — T${trimestre}`,
-        session.anneeCourante.libelle,
-        trimestre
-      );
-    }
+    if (!estScolarise(eleve.statut)) return;
+    recalculerMoyenneTrimestreEleve(session, eleve, trimestre);
   });
 
   // Classements
@@ -120,7 +209,7 @@ export function simulerTrimestre(session: Session, trimestre: 1 | 2 | 3): void {
 
   // Événements scolaires
   Object.values(session.eleves).forEach((eleve) => {
-    if (eleve.statut !== "actif" && eleve.statut !== "redoublant") return;
+    if (!estScolarise(eleve.statut)) return;
     const evenement = tirerEvenement(rng, eleve, trimestre, session.anneeCourante.libelle);
     if (evenement) eleve.evenements.push(evenement);
   });
@@ -147,7 +236,7 @@ export function simulerExamen(session: Session): void {
   const rng = rngDeSession(session, `EXAMEN-${session.anneeCourante.libelle}`);
 
   Object.values(session.eleves).forEach((eleve) => {
-    if (eleve.statut !== "actif" && eleve.statut !== "redoublant") return;
+    if (!estScolarise(eleve.statut)) return;
 
     const moyenneAnnuelle = moyenneAnnuelleTrimestres(eleve, session.anneeCourante.libelle);
     let moyenneFinale = moyenneAnnuelle;
@@ -172,10 +261,13 @@ export function simulerExamen(session: Session): void {
   session.anneeCourante.etapeCourante = "orientation";
 }
 
-/** Applique l'orientation automatique de fin d'année (passage / redoublement / recalage / filière). */
+/** Applique l'orientation automatique de fin d'année (passage / redoublement / recalage / filière),
+ * y compris pour les élèves déjà en post-bac : chaque cursus post-bac suit
+ * désormais exactement le même moteur (notes, mentions, décision de
+ * passage) que le secondaire, avec une durée fixe menant à un diplôme. */
 export function simulerOrientation(session: Session): void {
   Object.values(session.eleves).forEach((eleve) => {
-    if (eleve.statut !== "actif" && eleve.statut !== "redoublant") return;
+    if (!estScolarise(eleve.statut)) return;
 
     // Bourse au mérite : versée chaque année où la moyenne annuelle atteint
     // le seuil, quel que soit le niveau. Le statut "boursier" est acquis
@@ -242,6 +334,11 @@ export function simulerOrientation(session: Session): void {
     }
 
     // passage (ou avertissement) -> orientation vers le niveau suivant
+    if (estPostBac(eleve.niveau)) {
+      avancerUneAnneePostBac(eleve, session.anneeCourante.libelle);
+      return;
+    }
+
     if (eleve.niveau === "3e") {
       const entree = orienterFinDe3e(eleve, session.anneeCourante.libelle);
       eleve.niveau = entree.niveauDestination as Niveau;
@@ -270,7 +367,7 @@ export function simulerOrientation(session: Session): void {
       eleve.niveau = suivant;
       eleve.statut = "actif";
     } else {
-      // Fin de Terminale -> orientation post-bac (prépa, DUT, université, école d'ingénieurs)
+      // Fin de Terminale -> première entrée dans le post-bac (prépa, DUT, université, école d'ingénieurs)
       const niveauOrigine = eleve.niveau;
       const { niveau: destination, motif, excellence } = orienterPostBac(eleve);
       eleve.admissiblePolytechnique = excellence;
@@ -295,7 +392,6 @@ export function simulerOrientation(session: Session): void {
     }
   });
 
-  avancerPostBac(session);
   recomposerClasses(session);
   capturerSnapshotAnnee(session);
   session.anneeCourante.etapeCourante = "annee_suivante";
@@ -314,75 +410,69 @@ const DUREE_POST_BAC: Partial<Record<Niveau, number>> = {
   EcoleIngenieurs: 3, // 3 années après une prépa, 5 en admission directe (voir logique ci-dessous)
 };
 
-/** Fait avancer d'une année tous les élèves déjà engagés dans un cursus
- * post-bac (statut "universite") : passage à l'année suivante, transition
- * prépa -> école/université, ou obtention du diplôme final. C'est cette
- * fonction qui manquait et qui faisait que le parcours semblait "s'arrêter"
- * après le Bac. */
-function avancerPostBac(session: Session): void {
-  Object.values(session.eleves).forEach((eleve) => {
-    if (eleve.statut !== "universite") return;
+/** Fait avancer d'une année un élève déjà engagé dans un cursus post-bac,
+ * une fois sa décision de passage validée pour l'année (mêmes règles de
+ * mention/redoublement que le secondaire) : passage à l'année suivante,
+ * transition prépa -> école/université, ou obtention du diplôme final. */
+function avancerUneAnneePostBac(eleve: Eleve, annee: string): void {
+  eleve.anneePostBac = (eleve.anneePostBac ?? 1) + 1;
 
-    eleve.anneePostBac = (eleve.anneePostBac ?? 0) + 1;
-    const annee = session.anneeCourante.libelle;
+  // Admission directe en école d'ingénieurs (excellence au Bac) : cursus
+  // complet de 5 ans dès le départ. Admission via prépa : 3 années
+  // restantes (2 déjà accomplies en classe préparatoire).
+  const duree =
+    eleve.niveau === "EcoleIngenieurs"
+      ? eleve.admissiblePolytechnique
+        ? 5
+        : 3
+      : DUREE_POST_BAC[eleve.niveau] ?? 3;
 
-    // Admission directe en école d'ingénieurs (excellence au Bac) : cursus
-    // complet de 5 ans dès le départ. Admission via prépa : 3 années
-    // restantes (2 déjà accomplies en classe préparatoire).
-    const duree =
-      eleve.niveau === "EcoleIngenieurs"
-        ? eleve.admissiblePolytechnique
-          ? 5
-          : 3
-        : DUREE_POST_BAC[eleve.niveau] ?? 3;
-
-    if (eleve.anneePostBac < duree) {
-      eleve.historiqueOrientation.push({
-        annee,
-        niveauOrigine: eleve.niveau,
-        niveauDestination: eleve.niveau,
-        motif: `Passage en ${eleve.anneePostBac + 1}e année de ${NOM_NIVEAU[eleve.niveau]}.`,
-        scoreDetail: {},
-      });
-      return;
-    }
-
-    // Fin du cycle en cours
-    if (eleve.niveau === "PrepaScientifique") {
-      eleve.niveau = "EcoleIngenieurs";
-      eleve.anneePostBac = 0;
-      eleve.historiqueOrientation.push({
-        annee,
-        niveauOrigine: "PrepaScientifique",
-        niveauDestination: "EcoleIngenieurs",
-        motif: "Admission à l'école d'ingénieurs à l'issue de la classe préparatoire (3 années restantes).",
-        scoreDetail: {},
-      });
-      return;
-    }
-
-    if (eleve.niveau === "PrepaLitteraire") {
-      eleve.niveau = "Universite";
-      eleve.anneePostBac = 0;
-      eleve.historiqueOrientation.push({
-        annee,
-        niveauOrigine: "PrepaLitteraire",
-        niveauDestination: "Universite",
-        motif: "Poursuite à l'université à l'issue de la classe préparatoire littéraire.",
-        scoreDetail: {},
-      });
-      return;
-    }
-
-    // DUT, Université ou École d'ingénieurs achevés -> diplôme, fin de parcours
-    eleve.statut = "diplome";
+  if (eleve.anneePostBac <= duree) {
     eleve.historiqueOrientation.push({
       annee,
       niveauOrigine: eleve.niveau,
       niveauDestination: eleve.niveau,
-      motif: `Diplômé — ${NOM_NIVEAU[eleve.niveau]} (cursus de ${duree} an${duree > 1 ? "s" : ""}).`,
+      motif: `Passage en ${eleve.anneePostBac}e année de ${NOM_NIVEAU[eleve.niveau]}.`,
       scoreDetail: {},
     });
+    return;
+  }
+
+  // Fin du cycle en cours
+  if (eleve.niveau === "PrepaScientifique") {
+    eleve.niveau = "EcoleIngenieurs";
+    eleve.anneePostBac = 1;
+    eleve.historiqueOrientation.push({
+      annee,
+      niveauOrigine: "PrepaScientifique",
+      niveauDestination: "EcoleIngenieurs",
+      motif: "Admission à l'école d'ingénieurs à l'issue de la classe préparatoire (3 années restantes).",
+      scoreDetail: {},
+    });
+    return;
+  }
+
+  if (eleve.niveau === "PrepaLitteraire") {
+    eleve.niveau = "Universite";
+    eleve.anneePostBac = 1;
+    eleve.historiqueOrientation.push({
+      annee,
+      niveauOrigine: "PrepaLitteraire",
+      niveauDestination: "Universite",
+      motif: "Poursuite à l'université à l'issue de la classe préparatoire littéraire.",
+      scoreDetail: {},
+    });
+    return;
+  }
+
+  // DUT, Université ou École d'ingénieurs achevés -> diplôme, fin de parcours
+  eleve.statut = "diplome";
+  eleve.historiqueOrientation.push({
+    annee,
+    niveauOrigine: eleve.niveau,
+    niveauDestination: eleve.niveau,
+    motif: `Diplômé — ${NOM_NIVEAU[eleve.niveau]} (cursus de ${duree} an${duree > 1 ? "s" : ""}).`,
+    scoreDetail: {},
   });
 }
 
@@ -432,38 +522,55 @@ function capturerSnapshotAnnee(session: Session): void {
 /** Recompose les classes après un changement de niveau (ex: 3e A -> Seconde C1).
  * Les élèves sont triés par mérite (moyenne générale la plus récente) avant
  * répartition : le groupe 1 rassemble toujours les meilleurs éléments de la
- * série, le groupe 2 le niveau suivant, etc. (ex: 1ère C1 plus fort que 1ère C2). */
+ * série, le groupe 2 le niveau suivant, etc. (ex: 1ère C1 plus fort que 1ère C2).
+ * Le post-bac reçoit exactement le même traitement — avec en plus un
+ * regroupement par année de cursus, pour ne jamais mélanger une 1ère année
+ * d'école d'ingénieurs avec une 3e année dans la même classe. */
 function recomposerClasses(session: Session): void {
-  const niveaux = new Set(
-    Object.values(session.eleves)
-      .filter((e) => e.statut === "actif" || e.statut === "redoublant")
-      .map((e) => e.niveau)
+  const actifs = Object.values(session.eleves).filter(
+    (e) => e.statut === "actif" || e.statut === "redoublant" || e.statut === "universite"
   );
+
+  function cleGroupe(e: Eleve): string {
+    return estPostBac(e.niveau) ? `${e.niveau}::${e.anneePostBac ?? 1}` : e.niveau;
+  }
+
+  const groupes = new Map<string, Eleve[]>();
+  actifs.forEach((e) => {
+    const cle = cleGroupe(e);
+    if (!groupes.has(cle)) groupes.set(cle, []);
+    groupes.get(cle)!.push(e);
+  });
 
   const nouvellesClasses: Classe[] = [];
 
-  niveaux.forEach((niveau) => {
-    const elevesDuNiveau = Object.values(session.eleves)
-      .filter((e) => e.niveau === niveau && (e.statut === "actif" || e.statut === "redoublant"))
-      .sort((a, b) => {
-        const moyA = a.moyennes[a.moyennes.length - 1]?.moyenneGenerale ?? 0;
-        const moyB = b.moyennes[b.moyennes.length - 1]?.moyenneGenerale ?? 0;
-        return moyB - moyA;
-      });
+  groupes.forEach((membresGroupe, cle) => {
+    const [niveauStr, anneeStr] = cle.split("::");
+    const niveau = niveauStr as Niveau;
+    const anneePostBacGroupe = anneeStr ? Number(anneeStr) : undefined;
+
+    const tries = [...membresGroupe].sort((a, b) => {
+      const moyA = a.moyennes[a.moyennes.length - 1]?.moyenneGenerale ?? 0;
+      const moyB = b.moyennes[b.moyennes.length - 1]?.moyenneGenerale ?? 0;
+      return moyB - moyA;
+    });
 
     const taillesClasse = 45;
-    const nbClasses = Math.max(1, Math.ceil(elevesDuNiveau.length / taillesClasse));
+    const nbClasses = Math.max(1, Math.ceil(tries.length / taillesClasse));
 
     for (let i = 0; i < nbClasses; i++) {
-      const id = `${niveau}-${i + 1}`;
-      const membres = elevesDuNiveau.slice(i * taillesClasse, (i + 1) * taillesClasse);
+      const suffixeAnnee = anneePostBacGroupe ? `-an${anneePostBacGroupe}` : "";
+      const id = `${niveau}${suffixeAnnee}-${i + 1}`;
+      const membres = tries.slice(i * taillesClasse, (i + 1) * taillesClasse);
       membres.forEach((e) => (e.classeId = id));
+
+      const baseNom = anneePostBacGroupe
+        ? `${NOM_NIVEAU[niveau]} — ${anneePostBacGroupe === 1 ? "1ère" : `${anneePostBacGroupe}e`} année`
+        : NOM_NIVEAU[niveau];
+
       nouvellesClasses.push({
         id,
-        // Le numéro de groupe est accolé directement à la série, sans espace
-        // (ex: "Seconde A1", "1ère C2") pour bien le distinguer de la lettre
-        // de série elle-même. Le groupe 1 contient les meilleurs éléments.
-        nom: nbClasses > 1 ? `${NOM_NIVEAU[niveau]}${i + 1}` : NOM_NIVEAU[niveau],
+        nom: nbClasses > 1 ? `${baseNom} (groupe ${i + 1})` : baseNom,
         niveau,
         matricules: membres.map((e) => e.matricule),
         annee: session.anneeCourante.libelle,
