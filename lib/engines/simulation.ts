@@ -161,8 +161,16 @@ const GRADE_SECONDAIRE: Partial<Record<Niveau, string>> = {
 /** Clé de regroupement utilisée pour la COMPOSITION des classes (doit
  * rester filière par filière : on ne mélange jamais 2ndeA et 2ndeC dans une
  * même classe). Pour le post-bac, regroupe par promotion précise. */
+/** Clé de regroupement pour la COMPOSITION des classes : niveau, filière
+ * (pour le DUT et l'Université, où la filière doit rester une classe à
+ * part — jamais mélanger Médecine et Droit dans le même groupe), et année
+ * post-bac. Pour le secondaire, reste simplement le niveau (filière par
+ * filière, jamais mélangé — voir recomposerClasses). */
 export function cleNiveauEleve(eleve: Eleve): string {
-  return estPostBac(eleve.niveau) ? `${eleve.niveau}::${eleve.anneePostBac ?? 1}` : eleve.niveau;
+  if (!estPostBac(eleve.niveau)) return eleve.niveau;
+  const filiere =
+    eleve.niveau === "DUT" ? eleve.filiereDUT ?? "" : eleve.niveau === "Universite" ? eleve.filiereUniversitaire ?? "" : "";
+  return `${eleve.niveau}::${filiere}::${eleve.anneePostBac ?? 1}`;
 }
 
 /** Clé de regroupement utilisée pour les BOUTONS "par niveau" (Notes par
@@ -785,6 +793,12 @@ function chanceReussiteConcours(eleve: Eleve): number {
  * diplôme final. Le DUT ne finalise jamais individuellement (voir
  * finaliserResultatsDUT, appelé une fois pour toute la promotion). */
 function avancerUneAnneePostBac(eleve: Eleve, annee: string, rng: RNG): void {
+  // Un redoublement en cours de cursus post-bac laisse le statut à
+  // "redoublant" le temps de l'année redoublée ; dès que l'élève
+  // progresse à nouveau (ce que cette fonction représente), le statut
+  // post-bac normal ("universite") est rétabli — sinon l'élève resterait
+  // indéfiniment invisible pour la sélection finale (DUT, diplôme...).
+  eleve.statut = "universite";
   eleve.anneePostBac = (eleve.anneePostBac ?? 1) + 1;
   const duree = DUREE_POST_BAC[eleve.niveau] ?? 3;
 
@@ -1074,9 +1088,11 @@ function recomposerClasses(session: Session): void {
   const nouvellesClasses: Classe[] = [];
 
   groupes.forEach((membresGroupe, cle) => {
-    const [niveauStr, anneeStr] = cle.split("::");
-    const niveau = niveauStr as Niveau;
-    const anneePostBacGroupe = anneeStr ? Number(anneeStr) : undefined;
+    const parts = cle.split("::");
+    const niveau = parts[0] as Niveau;
+    const filiereGroupe = parts.length === 3 ? parts[1] || undefined : undefined;
+    const anneeStr = parts.length === 3 ? parts[2] : parts[1];
+    const anneePostBacGroupe = anneeStr !== undefined ? Number(anneeStr) : undefined;
 
     const tries = [...membresGroupe].sort((a, b) => {
       const moyA = a.moyennes[a.moyennes.length - 1]?.moyenneGenerale ?? 0;
@@ -1089,12 +1105,13 @@ function recomposerClasses(session: Session): void {
 
     for (let i = 0; i < nbClasses; i++) {
       const suffixeAnnee = anneePostBacGroupe ? `-an${anneePostBacGroupe}` : "";
-      const id = `${niveau}${suffixeAnnee}-${i + 1}`;
+      const suffixeFiliere = filiereGroupe ? `-${filiereGroupe.replace(/\s+/g, "")}` : "";
+      const id = `${niveau}${suffixeFiliere}${suffixeAnnee}-${i + 1}`;
       const membres = tries.slice(i * taillesClasse, (i + 1) * taillesClasse);
       membres.forEach((e) => (e.classeId = id));
 
       const baseNom = anneePostBacGroupe
-        ? `${NOM_NIVEAU[niveau]} — ${anneePostBacGroupe === 1 ? "1ère" : `${anneePostBacGroupe}e`} année`
+        ? `${NOM_NIVEAU[niveau]}${filiereGroupe ? ` — ${filiereGroupe}` : ""} — ${anneePostBacGroupe === 1 ? "1ère" : `${anneePostBacGroupe}e`} année`
         : NOM_NIVEAU[niveau];
 
       // Jamais le mot "groupe" dans un nom de classe : le numéro est

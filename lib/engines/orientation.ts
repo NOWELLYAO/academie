@@ -250,18 +250,11 @@ export function orienterPostBac(
     };
   }
 
-  // Série A — littéraire.
-  const fortLitteraire = c.francais >= 15 && c.anglais >= 13 && (c.philosophie ?? 0) >= 13;
+  // Série A — littéraire. Seul débouché "prépa" possible : Prépa Commerce
+  // (comme pour les meilleurs C) — pas de prépa littéraire dans cette
+  // organisation.
   const fortCommerceA = c.mathematiques >= 15 && c.francais >= 14 && c.anglais >= 14;
 
-  if (moyenne >= 15 && fortLitteraire && rng() < 0.7) {
-    return {
-      niveau: "PrepaLitteraire",
-      motif: "Excellent profil littéraire — classe préparatoire littéraire (objectif Sciences Po / ENS).",
-      filieresConseillees: FILIERES_LITTERAIRES,
-      excellence: true,
-    };
-  }
   if (moyenne >= 14 && fortCommerceA && rng() < 0.3) {
     return {
       niveau: "PrepaCommerce",
