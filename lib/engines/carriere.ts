@@ -9,6 +9,52 @@ import { pick, randRange, RNG } from "../utils/random";
 const DUREE_CARRIERE_AVANT_RETRAITE = 30; // années
 const PLAFOND_SALAIRE = 25000000; // FCFA / mois — évite l'emballement sur de très longues simulations
 
+/** Secteurs correspondant précisément à chaque filière de sortie (bien
+ * plus fin que le simple domaine général) — spécialités d'école
+ * d'ingénieurs, filières DUT, filières universitaires. Utilisé en priorité
+ * pour le premier poste : un médecin devient un métier de Santé, pas
+ * n'importe quel métier "naturaliste". */
+const SECTEURS_PAR_FILIERE: Record<string, string[]> = {
+  // Spécialités d'école d'ingénieurs (GBINZIN ou sélection DUT/université)
+  "Mécanique": ["BTP & Construction", "Pétrole & Énergie"],
+  "Télécom": ["Technologie & Informatique"],
+  "Énergétique": ["Pétrole & Énergie"],
+  "Génie électrique": ["BTP & Construction", "Technologie & Informatique"],
+  Informatique: ["Technologie & Informatique"],
+  Biochimie: ["Santé", "Agriculture & Agro-industrie"],
+  "Génie Civil": ["BTP & Construction"],
+  Mines: ["Pétrole & Énergie", "BTP & Construction"],
+  "Sciences de l'Eau": ["BTP & Construction", "Agriculture & Agro-industrie"],
+  "Ingénieur commercial": ["Commerce & Marketing"],
+  Finance: ["Banque & Finance"],
+  // Filières DUT
+  "Gestion commerciale": ["Commerce & Marketing"],
+  "Finances & Comptabilité": ["Banque & Finance"],
+  "Électromécanique": ["BTP & Construction", "Pétrole & Énergie"],
+  "Électrotechnique": ["BTP & Construction", "Technologie & Informatique"],
+  "Informatique et Télécom": ["Technologie & Informatique"],
+  Énergie: ["Pétrole & Énergie"],
+  "Chimie Industrielle": ["Agriculture & Agro-industrie", "Santé"],
+  // Filières universitaires
+  Médecine: ["Santé"],
+  Droit: ["Droit & Justice"],
+  "Sciences Économiques": ["Banque & Finance", "Commerce & Marketing"],
+  "Mathématiques-Informatique": ["Technologie & Informatique", "Banque & Finance"],
+  "Physique-Chimie": ["Pétrole & Énergie", "BTP & Construction"],
+  "Lettres & Langues": ["Éducation", "Administration publique"],
+  "Sciences Humaines & Psychologie": ["Éducation", "Administration publique"],
+};
+
+/** Retourne la filière précise de sortie d'un élève diplômé, quel que soit
+ * son cursus — c'est ce qui détermine le secteur de son premier poste. */
+function filierePrecise(eleve: Eleve): string | undefined {
+  if (eleve.niveau === "EcoleIngenieurs") return eleve.specialiteIngenieur;
+  if (eleve.niveau === "DUT") return eleve.filiereDUT;
+  if (eleve.niveau === "Universite") return eleve.filiereUniversitaire;
+  if (eleve.niveau === "EcoleCommerce") return "Sciences Économiques"; // même vivier secteur que Sciences Éco
+  return undefined;
+}
+
 const DESTINATIONS_EXPATRIATION = [
   { pays: "France", ville: "Paris" },
   { pays: "Canada", ville: "Montréal" },
@@ -137,7 +183,10 @@ export function demarrerCarriere(eleve: Eleve, rng: RNG, annee: string): void {
   }
 
   if (rng() < 0.1) {
-    const secteur = pick(rng, SECTEURS);
+    // Entreprend de préférence dans son propre domaine (70% du temps si sa
+    // filière a un secteur associé), sinon secteur libre.
+    const secteursFiliere = SECTEURS_PAR_FILIERE[filierePrecise(eleve) ?? ""];
+    const secteur = secteursFiliere && rng() < 0.7 ? pick(rng, secteursFiliere) : pick(rng, SECTEURS);
     const nom = `Fondateur — Start-up ${secteur.split(" ")[0]}`;
     const entreprise = `${eleve.nom} ${eleve.prenom[0]}. — SAS`;
     const salaire = Math.round(randRange(rng, 100000, 400000));
@@ -172,10 +221,28 @@ export function demarrerCarriere(eleve: Eleve, rng: RNG, annee: string): void {
   const filiere = filiereDuDiplome(eleve.niveau);
   const tier = niveauInitial(eleve);
   const autorises = domainesAutorises(eleve);
+  const secteursCibles = SECTEURS_PAR_FILIERE[filierePrecise(eleve) ?? ""];
 
-  let metiersDomaine = METIERS.filter(
-    (m) => m.filiere === filiere && m.niveauResponsabilite === tier && (m.domaine === dominant || m.domaine === "generale")
-  );
+  // Priorité absolue : la filière précise de sortie (spécialité ingénieur,
+  // filière DUT, filière université) détermine le secteur — un médecin
+  // devient un métier de Santé, un juriste un métier de Droit, etc.
+  let metiersDomaine: Metier[] = [];
+  if (secteursCibles) {
+    metiersDomaine = METIERS.filter(
+      (m) => secteursCibles.includes(m.secteur) && m.niveauResponsabilite === tier
+    );
+    if (metiersDomaine.length === 0) {
+      metiersDomaine = METIERS.filter(
+        (m) => secteursCibles.includes(m.secteur) && m.niveauResponsabilite === Math.max(1, tier - 1)
+      );
+    }
+  }
+
+  if (metiersDomaine.length === 0) {
+    metiersDomaine = METIERS.filter(
+      (m) => m.filiere === filiere && m.niveauResponsabilite === tier && (m.domaine === dominant || m.domaine === "generale")
+    );
+  }
   if (metiersDomaine.length === 0) {
     // Repli : on garde la contrainte de filière ET de domaines autorisés
     // par la série de Bac (jamais un littéraire qui devient médecin).

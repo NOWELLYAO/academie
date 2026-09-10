@@ -35,7 +35,18 @@ export function choisirSpecialiteIngenieur(eleve: Eleve, rng: RNG, origine: stri
 
   if (origine === "PrepaBio") return "Biochimie";
   if (origine === "PrepaGenieCivil") return pick(rng, ["Génie Civil", "Mines", "Sciences de l'Eau"]);
-  if (origine === "PrepaCommerce") return pick(rng, ["Ingénieur commercial", "Finance"]);
+  if (origine === "PrepaCommerce") {
+    // Séparées selon le profil : Finance pour les quantitatifs (Maths
+    // dominant), Ingénieur commercial pour les relationnels (Français/
+    // Anglais dominant) — plus un tirage 50/50 déconnecté du profil.
+    const scoreFinance = c.mathematiques;
+    const scoreCommercial = (c.francais + c.anglais) / 2;
+    if (Math.abs(scoreFinance - scoreCommercial) < 1) {
+      // Profils très proches : tirage équilibré malgré tout.
+      return pick(rng, ["Ingénieur commercial", "Finance"]);
+    }
+    return scoreFinance > scoreCommercial ? "Finance" : "Ingénieur commercial";
+  }
 
   const candidats: SpecialiteIngenieur[] = [];
   if (c.informatique >= 15) candidats.push("Informatique", "Télécom");
