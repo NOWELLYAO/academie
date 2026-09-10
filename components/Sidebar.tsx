@@ -28,6 +28,7 @@ const LIENS = [
   { href: "/tableau-honneur", label: "Tableau d'honneur", groupe: "distinctions" },
   { href: "/concours", label: "Concours", groupe: "distinctions" },
   { href: "/carrieres", label: "💼 Carrières", groupe: "vieactive" },
+  { href: "/promotions", label: "🎓 Promotions", groupe: "vieactive" },
   { href: "/finances", label: "💰 Finances", groupe: "vieactive" },
 ];
 

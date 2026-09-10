@@ -1106,14 +1106,22 @@ function recomposerClasses(session: Session): void {
       return moyB - moyA;
     });
 
-    const taillesClasse = 45;
-    const nbClasses = Math.max(1, Math.ceil(tries.length / taillesClasse));
+    // Répartition équilibrée : même effectif dans chaque classe (ou
+    // décalé d'un seul élève si le total est impair) — jamais une classe
+    // pleine à 45 et une autre presque vide.
+    const taillesClasseMax = 45;
+    const nbClasses = Math.max(1, Math.ceil(tries.length / taillesClasseMax));
+    const tailleBase = Math.floor(tries.length / nbClasses);
+    const reste = tries.length % nbClasses;
 
+    let curseur = 0;
     for (let i = 0; i < nbClasses; i++) {
+      const tailleClasse = tailleBase + (i < reste ? 1 : 0);
       const suffixeAnnee = anneePostBacGroupe ? `-an${anneePostBacGroupe}` : "";
       const suffixeFiliere = filiereGroupe ? `-${filiereGroupe.replace(/\s+/g, "")}` : "";
       const id = `${niveau}${suffixeFiliere}${suffixeAnnee}-${i + 1}`;
-      const membres = tries.slice(i * taillesClasse, (i + 1) * taillesClasse);
+      const membres = tries.slice(curseur, curseur + tailleClasse);
+      curseur += tailleClasse;
       membres.forEach((e) => (e.classeId = id));
 
       const baseNom = anneePostBacGroupe

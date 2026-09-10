@@ -18,8 +18,11 @@ import { MATIERES } from "@/lib/data/subjects";
 import { derniereMoyenneMatiere } from "@/lib/engines/ranking";
 import { Eleve, SubjectKey } from "@/lib/models/types";
 import Avatar from "@/components/Avatar";
+import { listerPromos, elevesDeLaPromo, parcoursResume } from "@/lib/engines/promotions";
+import { formaterFCFA } from "@/lib/engines/finances";
+import { LIBELLE_RESPONSABILITE } from "@/lib/data/metiers";
 
-type Mode = "classes" | "eleve" | "eleves";
+type Mode = "classes" | "eleve" | "eleves" | "promos";
 
 function moyenneClassePourMatiere(eleves: Eleve[], matiereKey: SubjectKey): number | null {
   const valeurs = eleves
@@ -37,6 +40,8 @@ export default function ComparateurPage() {
   const [matriculeEleve, setMatriculeEleve] = useState("");
   const [matriculeEleveA, setMatriculeEleveA] = useState("");
   const [matriculeEleveB, setMatriculeEleveB] = useState("");
+  const [promoA, setPromoA] = useState("");
+  const [promoB, setPromoB] = useState("");
 
   const classeAInfo = session?.classes.find((c) => c.id === classeA);
   const classeBInfo = session?.classes.find((c) => c.id === classeB);
@@ -88,6 +93,28 @@ export default function ComparateurPage() {
     }).filter((x): x is NonNullable<typeof x> => x !== null);
   }, [eleveA, eleveB]);
 
+  const promos = useMemo(() => (session ? listerPromos(session) : []), [session]);
+  const elevesPromoA = useMemo(() => (session && promoA ? elevesDeLaPromo(session, promoA) : []), [session, promoA]);
+  const elevesPromoB = useMemo(() => (session && promoB ? elevesDeLaPromo(session, promoB) : []), [session, promoB]);
+
+  function statsPromo(eleves: Eleve[]) {
+    const avecCarriere = eleves.filter((e) => e.carriere);
+    const salaireMoyen = avecCarriere.length
+      ? avecCarriere.reduce((a, e) => a + (e.carriere?.salaireMensuel ?? 0), 0) / avecCarriere.length
+      : 0;
+    const dirigeants = avecCarriere.filter((e) => (e.carriere?.niveauResponsabilite ?? 0) >= 5).length;
+    const maries = eleves.filter((e) => e.marie).length;
+    const entrepreneurs = avecCarriere.filter((e) => e.carriere?.typeCarriere === "entrepreneur").length;
+    const expatries = avecCarriere.filter((e) => e.carriere?.paysExpatriation).length;
+    const meilleur = [...avecCarriere].sort(
+      (a, b) => (b.carriere?.salaireMensuel ?? 0) - (a.carriere?.salaireMensuel ?? 0)
+    )[0];
+    return { total: eleves.length, salaireMoyen, dirigeants, maries, entrepreneurs, expatries, meilleur };
+  }
+
+  const statsA = useMemo(() => statsPromo(elevesPromoA), [elevesPromoA]);
+  const statsB = useMemo(() => statsPromo(elevesPromoB), [elevesPromoB]);
+
   if (!session) {
     return (
       <div className="p-5 md:p-10">
@@ -128,6 +155,12 @@ export default function ComparateurPage() {
           className={`px-4 py-2 text-sm ${mode === "eleves" ? "bg-ink text-paper" : "text-slate hover:bg-paper-dim"}`}
         >
           Élève vs Élève
+        </button>
+        <button
+          onClick={() => setMode("promos")}
+          className={`px-4 py-2 text-sm ${mode === "promos" ? "bg-ink text-paper" : "text-slate hover:bg-paper-dim"}`}
+        >
+          🎓 Promo vs Promo
         </button>
       </div>
 
@@ -300,7 +333,183 @@ export default function ComparateurPage() {
                   </ResponsiveContainer>
                 </div>
               )}
+
+              {(eleveA.carriere || eleveB.carriere) && (
+                <>
+                  <h2 className="font-display text-lg text-ink mt-10 mb-3">💼 Vie active</h2>
+                  <div className="border border-line bg-white/60 overflow-x-auto scrollbar-thin">
+                    <table className="ledger-table text-xs">
+                      <thead>
+                        <tr>
+                          <th></th>
+                          <th>{eleveA.nom} {eleveA.prenom}</th>
+                          <th>{eleveB.nom} {eleveB.prenom}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td className="text-slate">Poste actuel</td>
+                          <td>{eleveA.carriere?.nom ?? "—"}</td>
+                          <td>{eleveB.carriere?.nom ?? "—"}</td>
+                        </tr>
+                        <tr>
+                          <td className="text-slate">Entreprise</td>
+                          <td>{eleveA.carriere?.entreprise ?? "—"}</td>
+                          <td>{eleveB.carriere?.entreprise ?? "—"}</td>
+                        </tr>
+                        <tr>
+                          <td className="text-slate">Secteur</td>
+                          <td>{eleveA.carriere?.secteur ?? "—"}</td>
+                          <td>{eleveB.carriere?.secteur ?? "—"}</td>
+                        </tr>
+                        <tr>
+                          <td className="text-slate">Niveau de responsabilité</td>
+                          <td>
+                            {eleveA.carriere
+                              ? LIBELLE_RESPONSABILITE[eleveA.carriere.niveauResponsabilite as 1 | 2 | 3 | 4 | 5]
+                              : "—"}
+                          </td>
+                          <td>
+                            {eleveB.carriere
+                              ? LIBELLE_RESPONSABILITE[eleveB.carriere.niveauResponsabilite as 1 | 2 | 3 | 4 | 5]
+                              : "—"}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="text-slate">Salaire actuel</td>
+                          <td className="font-medium">
+                            {eleveA.carriere ? formaterFCFA(eleveA.carriere.salaireMensuel) : "—"}
+                          </td>
+                          <td className="font-medium">
+                            {eleveB.carriere ? formaterFCFA(eleveB.carriere.salaireMensuel) : "—"}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="text-slate">Situation</td>
+                          <td>
+                            {eleveA.marie
+                              ? `💍 Marié(e) depuis ${eleveA.anneeMariage}`
+                              : "Célibataire"}
+                          </td>
+                          <td>
+                            {eleveB.marie
+                              ? `💍 Marié(e) depuis ${eleveB.anneeMariage}`
+                              : "Célibataire"}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="text-slate align-top">Parcours</td>
+                          <td className="align-top">
+                            {parcoursResume(eleveA)
+                              .map((p) => p.poste)
+                              .join(" → ") || "—"}
+                          </td>
+                          <td className="align-top">
+                            {parcoursResume(eleveB)
+                              .map((p) => p.poste)
+                              .join(" → ") || "—"}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
             </>
+          )}
+        </>
+      )}
+
+      {mode === "promos" && (
+        <>
+          <div className="flex gap-4 mb-6 flex-wrap">
+            <div>
+              <label className="block text-[11px] uppercase tracking-wide text-slate mb-1">Promo A</label>
+              <select
+                value={promoA}
+                onChange={(e) => setPromoA(e.target.value)}
+                className="border border-line bg-white px-3 py-2 text-sm"
+              >
+                <option value="">— Sélectionner —</option>
+                {promos.map((p) => (
+                  <option key={p} value={p}>
+                    Promo {p}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] uppercase tracking-wide text-slate mb-1">Promo B</label>
+              <select
+                value={promoB}
+                onChange={(e) => setPromoB(e.target.value)}
+                className="border border-line bg-white px-3 py-2 text-sm"
+              >
+                <option value="">— Sélectionner —</option>
+                {promos.map((p) => (
+                  <option key={p} value={p}>
+                    Promo {p}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {!promoA || !promoB ? (
+            <p className="text-sm text-slate">Sélectionnez deux promotions pour lancer la comparaison.</p>
+          ) : (
+            <div className="border border-line bg-white/60 overflow-x-auto scrollbar-thin">
+              <table className="ledger-table text-sm">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>Promo {promoA}</th>
+                    <th>Promo {promoB}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="text-slate">Diplômés</td>
+                    <td className="font-medium">{statsA.total}</td>
+                    <td className="font-medium">{statsB.total}</td>
+                  </tr>
+                  <tr>
+                    <td className="text-slate">Salaire moyen actuel</td>
+                    <td className="font-medium">{formaterFCFA(statsA.salaireMoyen)}</td>
+                    <td className="font-medium">{formaterFCFA(statsB.salaireMoyen)}</td>
+                  </tr>
+                  <tr>
+                    <td className="text-slate">Meilleur salaire</td>
+                    <td>
+                      {statsA.meilleur ? formaterFCFA(statsA.meilleur.carriere!.salaireMensuel) : "—"}
+                    </td>
+                    <td>
+                      {statsB.meilleur ? formaterFCFA(statsB.meilleur.carriere!.salaireMensuel) : "—"}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="text-slate">Cadres dirigeants</td>
+                    <td>{statsA.dirigeants}</td>
+                    <td>{statsB.dirigeants}</td>
+                  </tr>
+                  <tr>
+                    <td className="text-slate">Entrepreneurs</td>
+                    <td>{statsA.entrepreneurs}</td>
+                    <td>{statsB.entrepreneurs}</td>
+                  </tr>
+                  <tr>
+                    <td className="text-slate">Expatriés</td>
+                    <td>{statsA.expatries}</td>
+                    <td>{statsB.expatries}</td>
+                  </tr>
+                  <tr>
+                    <td className="text-slate">Mariés</td>
+                    <td>{statsA.maries}</td>
+                    <td>{statsB.maries}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           )}
         </>
       )}

@@ -9,6 +9,7 @@ import Avatar from "@/components/Avatar";
 import { hallOfFame } from "@/lib/engines/ranking";
 import { Domaine, LIBELLE_DOMAINE, scoreDuDomaine } from "@/lib/engines/domaines";
 import { calculerBadges } from "@/lib/engines/badges";
+import { NOM_NIVEAU } from "@/lib/data/subjects";
 
 type Onglet = "generation" | Domaine;
 
@@ -23,6 +24,7 @@ const ONGLETS: { id: Onglet; label: string }[] = [
 export default function HallOfFamePage() {
   const session = useAcademyStore((s) => s.session);
   const [onglet, setOnglet] = useState<Onglet>("generation");
+  const [afficherTout, setAfficherTout] = useState(false);
 
   const classementDomaine = useMemo(() => {
     if (!session || onglet === "generation") return [];
@@ -49,15 +51,35 @@ export default function HallOfFamePage() {
     );
   }
 
-  const top = hallOfFame(session, 20);
+  const eleves = Object.values(session.eleves);
+  const enCoursDeScolarite = eleves.some(
+    (e) => e.statut === "actif" || e.statut === "redoublant" || e.statut === "universite"
+  );
+  const top = hallOfFame(session, afficherTout ? eleves.length : 20);
   const bilan = session.bilan;
+
+  function destinationFinale(matricule: string): string {
+    const e = eleves.find((el) => el.matricule === matricule);
+    if (!e) return "";
+    if (e.statut === "recale") return "Recalé(e)";
+    if (e.statut === "diplome" || e.statut === "retraite") {
+      const filiere = e.specialiteIngenieur || e.filiereDUT || e.filiereUniversitaire;
+      const base = `${NOM_NIVEAU[e.niveau]}${filiere ? ` — ${filiere}` : ""}`;
+      return e.statut === "retraite" ? `${base} · retraité(e)` : base;
+    }
+    return NOM_NIVEAU[e.niveau];
+  }
 
   return (
     <div className="p-5 md:p-10 max-w-4xl">
       <PageHeader
         eyebrow="🏆"
         title="Hall of Fame"
-        description="Le meilleur de la génération, dans l'ensemble et dans chaque grand domaine de talent."
+        description={
+          enCoursDeScolarite
+            ? "Le meilleur de la génération, dans l'ensemble et dans chaque grand domaine de talent — classement basé sur la moyenne de tout le parcours effectué jusqu'ici."
+            : "Récapitulatif complet du parcours scolaire, tous statuts confondus (diplômés, recalés, retraités) — chaque élève est noté sur la moyenne de l'intégralité de son cursus, de la 3e jusqu'à son dernier diplôme."
+        }
       />
 
       {bilan && onglet === "generation" && (
@@ -90,36 +112,50 @@ export default function HallOfFamePage() {
       </div>
 
       {onglet === "generation" ? (
-        <div className="border border-line bg-white/60 divide-y divide-line">
-          {top.map((e) => (
-            <Link
-              key={e.matricule}
-              href={`/eleves/${e.matricule}`}
-              className="flex items-center gap-4 px-5 py-3 hover:bg-paper-dim transition-colors"
+        <>
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs text-slate">
+              {afficherTout ? `${top.length} élèves` : `Top ${top.length}`} — classés par moyenne
+              sur l&apos;intégralité de leur parcours
+            </span>
+            <button
+              onClick={() => setAfficherTout((v) => !v)}
+              className="text-xs border border-line px-3 py-1.5 hover:bg-paper-dim transition-colors"
             >
-              <div
-                className={`font-display text-xl w-8 text-center shrink-0 ${
-                  e.rang === 1 ? "text-gold" : e.rang <= 3 ? "text-ink" : "text-slate"
-                }`}
+              {afficherTout ? "Revenir au Top 20" : "Voir tout le classement →"}
+            </button>
+          </div>
+          <div className="border border-line bg-white/60 divide-y divide-line">
+            {top.map((e) => (
+              <Link
+                key={e.matricule}
+                href={`/eleves/${e.matricule}`}
+                className="flex items-center gap-4 px-5 py-3 hover:bg-paper-dim transition-colors"
               >
-                {e.rang}
-              </div>
-              <Avatar matricule={e.matricule} nom={e.nom} prenom={e.prenom} size={32} />
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-ink truncate">
-                  {e.nom} {e.prenom}
+                <div
+                  className={`font-display text-xl w-8 text-center shrink-0 ${
+                    e.rang === 1 ? "text-gold" : e.rang <= 3 ? "text-ink" : "text-slate"
+                  }`}
+                >
+                  {e.rang}
                 </div>
-                <div className="text-xs text-slate">
-                  {e.matricule} · {e.classeNom}
+                <Avatar matricule={e.matricule} nom={e.nom} prenom={e.prenom} size={32} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-ink truncate">
+                    {e.nom} {e.prenom}
+                  </div>
+                  <div className="text-xs text-slate truncate">
+                    {e.matricule} · {destinationFinale(e.matricule)}
+                  </div>
                 </div>
-              </div>
-              <div className="text-right shrink-0">
-                <div className="font-display text-lg text-ink">{e.moyenneCumulee.toFixed(2)}</div>
-                <div className="text-[11px] text-slate">moyenne cumulée</div>
-              </div>
-            </Link>
-          ))}
-        </div>
+                <div className="text-right shrink-0">
+                  <div className="font-display text-lg text-ink">{e.moyenneCumulee.toFixed(2)}</div>
+                  <div className="text-[11px] text-slate">moyenne cumulée</div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </>
       ) : (
         <div className="border border-line bg-white/60 divide-y divide-line">
           {classementDomaine.length === 0 ? (

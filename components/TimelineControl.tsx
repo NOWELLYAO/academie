@@ -50,6 +50,52 @@ export default function TimelineControl() {
   const groupes = useMemo(() => (session ? listerGroupesNiveau(session) : []), [session]);
 
   if (!session) return null;
+
+  const eleves = Object.values(session.eleves);
+  const enCoursDeScolarite = eleves.some(
+    (e) => e.statut === "actif" || e.statut === "redoublant" || e.statut === "universite"
+  );
+
+  if (!enCoursDeScolarite) {
+    const diplomes = eleves.filter((e) => e.statut === "diplome" || e.statut === "retraite").length;
+    const recales = eleves.filter((e) => e.statut === "recale").length;
+    const retraites = eleves.filter((e) => e.statut === "retraite").length;
+    const meilleurSalaire = [...eleves]
+      .filter((e) => e.carriere)
+      .sort((a, b) => (b.carriere?.salaireMensuel ?? 0) - (a.carriere?.salaireMensuel ?? 0))[0];
+
+    return (
+      <div className="border border-gold bg-gold-soft/20 px-5 py-5 text-center">
+        <div className="text-[11px] uppercase tracking-wide text-slate mb-1">
+          {session.anneeCourante.libelle}
+        </div>
+        <div className="font-display text-xl text-ink mb-2">🏁 Parcours scolaire terminé</div>
+        <p className="text-sm text-slate max-w-xl mx-auto mb-4">
+          Plus aucun élève n&apos;est scolarisé (secondaire ou post-bac) — {diplomes} diplômé(s)
+          au total, dont {retraites} déjà retraité(s), et {recales} recalé(s) en cours de route.
+          Il n&apos;y a plus rien à simuler côté scolarité ; la vie active continue de son côté.
+        </p>
+        {meilleurSalaire && (
+          <p className="text-xs text-slate mb-4">
+            Meilleur parcours professionnel actuel :{" "}
+            <span className="text-ink font-medium">
+              {meilleurSalaire.nom} {meilleurSalaire.prenom}
+            </span>{" "}
+            — {meilleurSalaire.carriere!.nom}
+          </p>
+        )}
+        <div className="flex justify-center gap-3 flex-wrap">
+          <a href="/carrieres" className="bg-ink text-paper px-4 py-2 text-sm hover:bg-ink-soft transition-colors">
+            Voir les carrières →
+          </a>
+          <a href="/hall-of-fame" className="border border-line px-4 py-2 text-sm hover:bg-paper-dim transition-colors">
+            Hall of Fame →
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   const etapeActuelle = session.anneeCourante.etapeCourante;
   const idxActuel = ETAPES.findIndex((e) => e.id === etapeActuelle);
   const libelleActuel = ETAPES[idxActuel]?.label ?? etapeActuelle;
