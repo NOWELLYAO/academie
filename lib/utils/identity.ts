@@ -7,15 +7,22 @@ export interface Identite {
   pays: string;
 }
 
+const ORIGINES_IVOIRIENNES = ORIGINES.filter((o) => o.pays === "Côte d'Ivoire");
+const ORIGINES_ETRANGERES = ORIGINES.filter((o) => o.pays !== "Côte d'Ivoire");
+
 /**
- * Tire une identité (nom + prénom) parmi un large éventail d'origines —
- * ivoirienne, sénégalaise, camerounaise, tchadienne, nigérienne,
- * française, américaine, chinoise, japonaise, allemande — et garantit
- * qu'elle n'a pas déjà été attribuée dans la session en cours.
+ * Tire une identité (nom + prénom) et garantit qu'elle n'a pas déjà été
+ * attribuée dans la session en cours. La grande majorité des élèves sont
+ * ivoiriens (Côte d'Ivoire) ; `etranger` force le tirage parmi les autres
+ * origines (sénégalaise, camerounaise, tchadienne, nigérienne, française,
+ * américaine, chinoise, japonaise, allemande) pour la minorité d'élèves
+ * internationaux de chaque classe.
  */
-export function genererIdentiteUnique(rng: RNG, dejaUtilisees: Set<string>): Identite {
+export function genererIdentiteUnique(rng: RNG, dejaUtilisees: Set<string>, etranger = false): Identite {
+  const origines = etranger ? ORIGINES_ETRANGERES : ORIGINES_IVOIRIENNES;
+
   for (let tentative = 0; tentative < 80; tentative++) {
-    const origine = pick(rng, ORIGINES);
+    const origine = pick(rng, origines);
     const estFille = rng() < 0.5;
     const nom = pick(rng, origine.nomsFamille);
     const prenom = estFille ? pick(rng, origine.prenomsFeminins) : pick(rng, origine.prenomsMasculins);
@@ -27,9 +34,10 @@ export function genererIdentiteUnique(rng: RNG, dejaUtilisees: Set<string>): Ide
   }
 
   // Repli extrêmement improbable (pools épuisés) : on combine deux origines
-  // différentes pour garantir malgré tout l'unicité.
-  const origineNom = pick(rng, ORIGINES);
-  const originePrenom = pick(rng, ORIGINES);
+  // différentes (au sein du même groupe ivoirien/étranger) pour garantir
+  // malgré tout l'unicité.
+  const origineNom = pick(rng, origines);
+  const originePrenom = pick(rng, origines);
   const estFille = rng() < 0.5;
   let nom = pick(rng, origineNom.nomsFamille);
   let prenom = estFille ? pick(rng, originePrenom.prenomsFeminins) : pick(rng, originePrenom.prenomsMasculins);

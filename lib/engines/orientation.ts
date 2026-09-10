@@ -148,42 +148,42 @@ export function orienterPostBac(
   const c = eleve.competences;
   const moyenne = moyenneEleve(eleve);
 
-  // Série C — scientifique pur : le gros bataillon part en Prépa
-  // scientifique (MPSI), une partie des très bons profils polyvalents
-  // tente le Commerce, et quelques-uns rejoignent la Prépa Bio / Génie
-  // Civil aux côtés des meilleurs D.
-  if (eleve.niveau === "TermC") {
-    const fortMathsPhysique = c.mathematiques >= 15 && c.physique >= 14;
-    const fortMathsInfo = c.mathematiques >= 14 && c.informatique >= 15;
+  // AUCUNE admission directe en école d'ingénieurs depuis la Terminale,
+  // quel que soit le niveau : tout le monde passe soit par une classe
+  // préparatoire (2 ans) puis le concours GBINZIN, soit par un DUT
+  // (3 ans) où seuls les 5 meilleurs de chaque filière technique
+  // rejoignent ensuite les classes d'ingénieurs (voir simulation.ts).
 
-    if (moyenne >= 17 && c.mathematiques >= 18 && c.physique >= 16) {
-      return {
-        niveau: "EcoleIngenieurs",
-        motif: "Excellence scientifique exceptionnelle — admission directe en école d'ingénieurs post-bac (cursus 5 ans).",
-        filieresConseillees: [...FILIERES_MATHS_PHYSIQUE, ...FILIERES_MATHS_INFO].slice(0, 4),
-        excellence: true,
-      };
-    }
-    if (moyenne >= 14 && rng() < 0.15) {
+  // Série C — scientifique pur.
+  if (eleve.niveau === "TermC") {
+    // MPSI (Techno) : fortes notes en Maths ET Physique.
+    const fortMPSI = c.mathematiques >= 16 && c.physique >= 15;
+    // Prépa Commerce : fortes notes en Maths, Français ET Anglais.
+    const fortCommerce = c.mathematiques >= 15 && c.francais >= 14 && c.anglais >= 14;
+    // Prépa Génie Civil / Mines / Sciences de l'Eau : bonnes notes en
+    // Maths, Physique ET SVT.
+    const fortGenieCivil = c.mathematiques >= 14 && c.physique >= 14 && c.svt >= 12;
+
+    if (moyenne >= 14 && fortCommerce && rng() < 0.15) {
       return {
         niveau: "PrepaCommerce",
-        motif: "Bon profil polyvalent — classe préparatoire aux écoles de commerce.",
+        motif: "Bon profil polyvalent (Maths/Français/Anglais) — classe préparatoire Commerce.",
         filieresConseillees: FILIERES_COMMERCE,
         excellence: false,
       };
     }
-    if (moyenne >= 14 && fortMathsPhysique && rng() < 0.12) {
+    if (moyenne >= 13 && fortGenieCivil && rng() < 0.12) {
       return {
         niveau: "PrepaGenieCivil",
-        motif: "Bon profil scientifique — classe préparatoire visant le concours du génie civil.",
+        motif: "Bon profil scientifique large (Maths/Physique/SVT) — classe préparatoire Génie Civil / Mines / Sciences de l'Eau.",
         filieresConseillees: FILIERES_MATHS_PHYSIQUE,
         excellence: false,
       };
     }
-    if (moyenne >= 13 && (fortMathsPhysique || fortMathsInfo)) {
+    if (moyenne >= 14 && fortMPSI) {
       return {
         niveau: "PrepaScientifique",
-        motif: "Bon niveau scientifique — classe préparatoire MPSI visant le concours des écoles d'ingénieurs.",
+        motif: "Fortes notes en Maths et Physique — classe préparatoire MPSI visant le concours GBINZIN.",
         filieresConseillees: [...FILIERES_MATHS_PHYSIQUE, ...FILIERES_MATHS_INFO].slice(0, 4),
         excellence: false,
       };
@@ -191,7 +191,7 @@ export function orienterPostBac(
     if (moyenne >= 10) {
       return {
         niveau: "DUT",
-        motif: "Niveau correct mais profil plus technique — DUT/BTS pour une insertion professionnelle rapide.",
+        motif: "Niveau correct mais profil plus technique — DUT en 3 ans (accès possible aux classes d'ingénieurs pour les 5 meilleurs de la filière).",
         filieresConseillees: [...FILIERES_MATHS_INFO, ...FILIERES_MATHS_PHYSIQUE].slice(0, 3),
         excellence: false,
       };
@@ -204,30 +204,29 @@ export function orienterPostBac(
     };
   }
 
-  // Série D — scientifique / SVT : les meilleurs partent en Prépa Bio
-  // (BCPST) ou Prépa Génie Civil selon leur profil dominant, jamais en
-  // MPSI (réservée à la série C).
+  // Série D — scientifique / SVT.
   if (eleve.niveau === "TermD") {
-    const fortSVT = c.svt >= 15;
-    const fortMathsPhysique = c.mathematiques >= 14 && c.physique >= 13;
+    // Prépa Bio (BCPST) : fortes notes en SVT, bonnes en Maths et en Physique.
+    const fortBio = c.svt >= 15 && c.mathematiques >= 13 && c.physique >= 13;
+    const fortGenieCivil = c.mathematiques >= 14 && c.physique >= 14 && c.svt >= 12;
 
-    if (moyenne >= 14 && fortSVT) {
+    if (moyenne >= 13 && fortBio) {
       return {
         niveau: "PrepaBio",
-        motif: "Excellent profil SVT — classe préparatoire BCPST visant les concours d'écoles d'ingénieurs et vétérinaires/agronomiques.",
+        motif: "Fortes notes en SVT, bon niveau Maths — classe préparatoire Bio (BCPST) visant le concours GBINZIN.",
         filieresConseillees: FILIERES_SVT,
         excellence: false,
       };
     }
-    if (moyenne >= 14 && fortMathsPhysique) {
+    if (moyenne >= 13 && fortGenieCivil) {
       return {
         niveau: "PrepaGenieCivil",
-        motif: "Bon profil scientifique — classe préparatoire visant le concours du génie civil.",
+        motif: "Bon profil scientifique large (Maths/Physique/SVT) — classe préparatoire Génie Civil / Mines / Sciences de l'Eau.",
         filieresConseillees: FILIERES_MATHS_PHYSIQUE,
         excellence: false,
       };
     }
-    if (fortSVT && moyenne >= 12) {
+    if (c.svt >= 13 && moyenne >= 12) {
       return {
         niveau: "Universite",
         motif: "Profil SVT solide — parcours universitaire scientifique (biologie, médecine, agronomie).",
@@ -238,7 +237,7 @@ export function orienterPostBac(
     if (moyenne >= 10) {
       return {
         niveau: "DUT",
-        motif: "Niveau correct mais profil plus technique — DUT/BTS pour une insertion professionnelle rapide.",
+        motif: "Niveau correct mais profil plus technique — DUT en 3 ans (accès possible aux classes d'ingénieurs pour les 5 meilleurs de la filière).",
         filieresConseillees: FILIERES_SVT.slice(0, 2),
         excellence: false,
       };
@@ -251,9 +250,9 @@ export function orienterPostBac(
     };
   }
 
-  // Série A — littéraire : les meilleurs partent en Prépa littéraire, une
-  // partie en Prépa Commerce (comme certains excellents C).
+  // Série A — littéraire.
   const fortLitteraire = c.francais >= 15 && c.anglais >= 13 && (c.philosophie ?? 0) >= 13;
+  const fortCommerceA = c.mathematiques >= 15 && c.francais >= 14 && c.anglais >= 14;
 
   if (moyenne >= 15 && fortLitteraire && rng() < 0.7) {
     return {
@@ -263,10 +262,10 @@ export function orienterPostBac(
       excellence: true,
     };
   }
-  if (moyenne >= 14 && rng() < 0.3) {
+  if (moyenne >= 14 && fortCommerceA && rng() < 0.3) {
     return {
       niveau: "PrepaCommerce",
-      motif: "Bon profil littéraire polyvalent — classe préparatoire aux écoles de commerce.",
+      motif: "Bon profil polyvalent (Maths/Français/Anglais) — classe préparatoire Commerce.",
       filieresConseillees: FILIERES_COMMERCE,
       excellence: false,
     };
@@ -281,7 +280,7 @@ export function orienterPostBac(
   }
   return {
     niveau: "DUT",
-    motif: "Orientation vers un DUT/BTS pour un parcours plus court et professionnalisant.",
+    motif: "Orientation vers un DUT en 3 ans, parcours professionnalisant.",
     filieresConseillees: FILIERES_LITTERAIRES.slice(0, 2),
     excellence: false,
   };

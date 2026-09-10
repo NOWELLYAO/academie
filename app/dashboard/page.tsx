@@ -108,7 +108,7 @@ export default function DashboardPage() {
             <li>Université — 3 ans</li>
             <li>Classe préparatoire scientifique — 2 ans, puis 3 ans d&apos;école d&apos;ingénieurs (5 ans au total)</li>
             <li>Classe préparatoire littéraire — 2 ans, puis université</li>
-            <li>École d&apos;ingénieurs en admission directe (excellence au Bac) — 5 ans</li>
+            <li>École d&apos;ingénieurs via Prépa (MPSI/Bio/Génie Civil) + concours GBINZIN, ou via DUT (3 ans, top 5 de la filière) — 5 ans au total</li>
           </ul>
           <p>
             <strong className="text-ink">Redoublement :</strong> un seul redoublement est autorisé sur

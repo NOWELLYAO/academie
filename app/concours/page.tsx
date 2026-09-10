@@ -143,8 +143,8 @@ export default function ConcoursPage() {
       {presetActif.prestige && (
         <div className="border-l-2 border-gold bg-gold-soft/20 px-4 py-2.5 text-sm text-ink -mt-6 mb-10">
           🏛️ Réservé aux élèves de <strong>Prépa scientifique (série C)</strong> — jamais série A. Le
-          lauréat reçoit le statut <strong>Admission d&apos;excellence</strong> (comme une admission
-          directe en école d&apos;ingénieurs) ainsi qu&apos;une bourse spéciale, en plus de la
+          lauréat reçoit le statut <strong>Admission d&apos;excellence</strong> (réussite garantie au
+          concours GBINZIN, sans avoir à le repasser) ainsi qu&apos;une bourse spéciale, en plus de la
           récompense du podium.
         </div>
       )}

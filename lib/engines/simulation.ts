@@ -4,6 +4,8 @@ import { demarrerCarriere, avancerCarriereEleve } from "./carriere";
 import { avancerPatrimoineEleve } from "./patrimoine";
 import { avancerMariages } from "./mariage";
 import { choisirSpecialiteIngenieur } from "../data/specialitesIngenieur";
+import { choisirFiliereDUT, specialiteDepuisFiliereDUT, FILIERES_DUT_TECHNIQUES } from "../data/filieresDUT";
+import { choisirFiliereUniversite } from "../data/filieresUniversite";
 import { mulberry32, RNG, clamp } from "../utils/random";
 import {
   calculerMoyenneTrimestre,
@@ -12,7 +14,7 @@ import {
 } from "./grading";
 import { tirerEvenement } from "./events";
 import { calculerIndicateurProgression } from "./progression";
-import { classerClasse, classerGeneration } from "./ranking";
+import { classerClasse, classerGeneration, moyenneCumulee } from "./ranking";
 import {
   decisionProgression,
   estNiveauExamen,
@@ -646,7 +648,12 @@ function traiterOrientationEleve(session: Session, eleve: Eleve, rng: RNG): void
         "Bourse d'excellence — admission post-bac",
         session.anneeCourante.libelle
       );
-      eleve.specialiteIngenieur = choisirSpecialiteIngenieur(eleve, rng, "direct");
+    }
+    if (destination === "DUT") {
+      eleve.filiereDUT = choisirFiliereDUT(eleve, rng);
+    }
+    if (destination === "Universite") {
+      eleve.filiereUniversitaire = choisirFiliereUniversite(eleve, rng).nom;
     }
     eleve.anneePostBac = 1;
   }
@@ -659,6 +666,15 @@ function traiterOrientationEleve(session: Session, eleve: Eleve, rng: RNG): void
 export function simulerOrientation(session: Session): void {
   const rng = rngDeSession(session, `ORIENTATION-${session.anneeCourante.libelle}`);
   Object.values(session.eleves).forEach((eleve) => traiterOrientationEleve(session, eleve, rng));
+
+  // Sélection collective des 5 meilleurs de chaque filière DUT technique
+  // (accès aux classes d'ingénieurs) — doit se faire après que tous les
+  // élèves de DUT de la génération ont été traités ci-dessus.
+  finaliserResultatsDUT(session, rng, session.anneeCourante.libelle);
+
+  // Repêchage des 2 meilleurs de Sciences Éco / Maths-Info / Physique-
+  // Chimie après leur 2e année d'université, selon critères.
+  verifierRepechageIngenieur(session, rng, session.anneeCourante.libelle);
 
   // Les diplômés déjà en poste évoluent dans leur carrière (promotion,
   // entrepreneuriat, expatriation, retraite) chaque année, indépendamment
@@ -708,6 +724,13 @@ export function organiserOrientationPourNiveau(session: Session, groupeCle: stri
     });
   });
 
+  // Si ce niveau regroupait des élèves de DUT arrivés en fin de cursus,
+  // on finalise leur sélection tout de suite plutôt que de les laisser en
+  // attente jusqu'au bouton global.
+  finaliserResultatsDUT(session, rng, session.anneeCourante.libelle);
+
+  verifierRepechageIngenieur(session, rng, session.anneeCourante.libelle);
+
   return traites;
 }
 
@@ -718,45 +741,52 @@ export function organiserOrientationPourNiveau(session: Session, groupeCle: stri
  * ans comme dans le système réel) ; en cas d'échec, repli sur l'université.
  * Chaque parcours se termine toujours par un diplôme, jamais un blocage
  * silencieux. */
+/** Durée (en années) de chaque cursus post-bac. Les 4 classes
+ * préparatoires (MPSI, Bio, Génie Civil, Commerce) débouchent, à l'issue
+ * de leurs 2 années, sur le concours GBINZIN, très sélectif — en cas de
+ * réussite, admission en école d'ingénieurs (ou de commerce pour la
+ * filière Commerce) ; en cas d'échec, repli sur l'université. Le DUT dure
+ * 3 ans et se termine par la sélection des 5 meilleurs de chaque filière
+ * technique, qui rejoignent alors les classes d'ingénieurs aux côtés des
+ * admis au GBINZIN — les autres diplôment directement. AUCUN élève
+ * n'accède à l'école d'ingénieurs directement depuis la Terminale : tout
+ * le monde passe par l'une de ces deux voies. Chaque parcours se termine
+ * toujours par un diplôme, jamais un blocage silencieux. */
 const DUREE_POST_BAC: Partial<Record<Niveau, number>> = {
   PrepaScientifique: 2,
   PrepaBio: 2,
   PrepaGenieCivil: 2,
   PrepaCommerce: 2,
   PrepaLitteraire: 2,
-  DUT: 2,
+  DUT: 3,
   Universite: 3,
-  EcoleIngenieurs: 3, // 3 années après une prépa, 5 en admission directe
+  EcoleIngenieurs: 3,
   EcoleCommerce: 3,
 };
 
 const PREPAS_CONCOURS_INGENIEUR: Niveau[] = ["PrepaScientifique", "PrepaBio", "PrepaGenieCivil"];
 
-/** Probabilité de réussite au concours de fin de prépa, selon le niveau
- * atteint (moyenne de la dernière année) et le potentiel caché. */
+/** Probabilité de réussite au concours GBINZIN, selon le niveau atteint
+ * (moyenne de la dernière année) et le potentiel caché. Un lauréat du
+ * Concours X / Polytechnique (admissiblePolytechnique) réussit toujours —
+ * c'est la seule voie de passage garanti, mais elle passe quand même par
+ * la prépa. */
 function chanceReussiteConcours(eleve: Eleve): number {
+  if (eleve.admissiblePolytechnique) return 1;
   const moyenne = eleve.moyennes[eleve.moyennes.length - 1]?.moyenneGenerale ?? 10;
   const potMax = Math.max(eleve.potentiel.potentielScientifique, eleve.potentiel.potentielLitteraire);
-  return clamp(0.3 + (moyenne - 10) * 0.05 + (potMax / 100) * 0.25, 0.15, 0.92);
+  return clamp(0.22 + (moyenne - 10) * 0.045 + (potMax / 100) * 0.2, 0.08, 0.9);
 }
 
 /** Fait avancer d'une année un élève déjà engagé dans un cursus post-bac,
  * une fois sa décision de passage validée pour l'année (mêmes règles de
  * mention/redoublement que le secondaire) : passage à l'année suivante,
- * concours de fin de prépa (réussite ou repli), ou obtention du diplôme
- * final. */
+ * concours GBINZIN de fin de prépa (réussite ou repli), ou obtention du
+ * diplôme final. Le DUT ne finalise jamais individuellement (voir
+ * finaliserResultatsDUT, appelé une fois pour toute la promotion). */
 function avancerUneAnneePostBac(eleve: Eleve, annee: string, rng: RNG): void {
   eleve.anneePostBac = (eleve.anneePostBac ?? 1) + 1;
-
-  // Admission directe en école d'ingénieurs (excellence au Bac) : cursus
-  // complet de 5 ans dès le départ. Admission via prépa : 3 années
-  // restantes (2 déjà accomplies en classe préparatoire).
-  const duree =
-    eleve.niveau === "EcoleIngenieurs"
-      ? eleve.admissiblePolytechnique
-        ? 5
-        : 3
-      : DUREE_POST_BAC[eleve.niveau] ?? 3;
+  const duree = DUREE_POST_BAC[eleve.niveau] ?? 3;
 
   if (eleve.anneePostBac <= duree) {
     eleve.historiqueOrientation.push({
@@ -769,8 +799,8 @@ function avancerUneAnneePostBac(eleve: Eleve, annee: string, rng: RNG): void {
     return;
   }
 
-  // Fin de prépa scientifique (MPSI, Bio, Génie Civil) -> concours d'entrée
-  // en école d'ingénieurs, avec une vraie chance d'échec.
+  // Fin de prépa (MPSI, Bio, Génie Civil) -> concours GBINZIN, avec une
+  // vraie chance d'échec.
   if (PREPAS_CONCOURS_INGENIEUR.includes(eleve.niveau)) {
     const origine = eleve.niveau;
     const reussite = rng() < chanceReussiteConcours(eleve);
@@ -782,24 +812,25 @@ function avancerUneAnneePostBac(eleve: Eleve, annee: string, rng: RNG): void {
         annee,
         niveauOrigine: origine,
         niveauDestination: "EcoleIngenieurs",
-        motif: `Admis(e) au concours à l'issue de ${NOM_NIVEAU[origine]} — intégration en école d'ingénieurs, spécialité ${eleve.specialiteIngenieur} (3 années restantes).`,
+        motif: `Admis(e) au concours GBINZIN à l'issue de ${NOM_NIVEAU[origine]} — intégration en école d'ingénieurs, spécialité ${eleve.specialiteIngenieur} (3 années restantes).`,
         scoreDetail: {},
       });
     } else {
       eleve.niveau = "Universite";
       eleve.anneePostBac = 1;
+      eleve.filiereUniversitaire = choisirFiliereUniversite(eleve, rng).nom;
       eleve.historiqueOrientation.push({
         annee,
         niveauOrigine: origine,
         niveauDestination: "Universite",
-        motif: `Concours non validé à l'issue de ${NOM_NIVEAU[origine]} — poursuite en université.`,
+        motif: `Concours GBINZIN non validé à l'issue de ${NOM_NIVEAU[origine]} — poursuite en université.`,
         scoreDetail: {},
       });
     }
     return;
   }
 
-  // Fin de Prépa Commerce -> concours d'entrée en école de commerce.
+  // Fin de Prépa Commerce -> concours GBINZIN d'entrée en école de commerce.
   if (eleve.niveau === "PrepaCommerce") {
     const reussite = rng() < chanceReussiteConcours(eleve);
     if (reussite) {
@@ -809,17 +840,18 @@ function avancerUneAnneePostBac(eleve: Eleve, annee: string, rng: RNG): void {
         annee,
         niveauOrigine: "PrepaCommerce",
         niveauDestination: "EcoleCommerce",
-        motif: "Admis(e) au concours à l'issue de la Prépa Commerce — intégration en école de commerce (3 années restantes).",
+        motif: "Admis(e) au concours GBINZIN à l'issue de la Prépa Commerce — intégration en école de commerce (3 années restantes).",
         scoreDetail: {},
       });
     } else {
       eleve.niveau = "Universite";
       eleve.anneePostBac = 1;
+      eleve.filiereUniversitaire = choisirFiliereUniversite(eleve, rng).nom;
       eleve.historiqueOrientation.push({
         annee,
         niveauOrigine: "PrepaCommerce",
         niveauDestination: "Universite",
-        motif: "Concours non validé à l'issue de la Prépa Commerce — poursuite en université.",
+        motif: "Concours GBINZIN non validé à l'issue de la Prépa Commerce — poursuite en université.",
         scoreDetail: {},
       });
     }
@@ -829,6 +861,7 @@ function avancerUneAnneePostBac(eleve: Eleve, annee: string, rng: RNG): void {
   if (eleve.niveau === "PrepaLitteraire") {
     eleve.niveau = "Universite";
     eleve.anneePostBac = 1;
+    eleve.filiereUniversitaire = choisirFiliereUniversite(eleve, rng).nom;
     eleve.historiqueOrientation.push({
       annee,
       niveauOrigine: "PrepaLitteraire",
@@ -839,7 +872,15 @@ function avancerUneAnneePostBac(eleve: Eleve, annee: string, rng: RNG): void {
     return;
   }
 
-  // DUT, Université, École d'ingénieurs ou École de commerce achevés -> diplôme, fin de parcours
+  if (eleve.niveau === "DUT") {
+    // Ne finalise jamais individuellement ici : la sélection des 5
+    // meilleurs de chaque filière technique (accès aux classes
+    // d'ingénieurs) se fait collectivement, une fois tous les élèves de
+    // DUT de la génération traités — voir finaliserResultatsDUT.
+    return;
+  }
+
+  // Université, École d'ingénieurs ou École de commerce achevées -> diplôme, fin de parcours
   eleve.statut = "diplome";
   eleve.historiqueOrientation.push({
     annee,
@@ -851,10 +892,123 @@ function avancerUneAnneePostBac(eleve: Eleve, annee: string, rng: RNG): void {
   demarrerCarriere(eleve, rng, annee);
 }
 
-/** Enregistre une photographie de la génération à la fin de l'année qui
- * vient de s'achever (répartition par niveau, moyenne, taux de réussite,
- * destinations post-bac) pour permettre de tracer son évolution dans le
- * temps sur plusieurs années. */
+/** Une fois par an, traite collectivement tous les élèves de DUT arrivés
+ * au bout de leurs 3 années : au sein de chaque filière DUT technique
+ * (Électromécanique, Électrotechnique, Informatique et Télécom, Énergie,
+ * Chimie Industrielle), les 5 meilleurs par moyenne cumulée rejoignent les
+ * classes d'ingénieurs (aux côtés des admis au GBINZIN), avec la
+ * spécialité correspondant à leur filière. Les autres (et systématiquement
+ * les filières Gestion commerciale / Finances & Comptabilité, qui ne
+ * donnent jamais accès aux classes d'ingénieurs) obtiennent leur diplôme
+ * de DUT et démarrent leur carrière. */
+function finaliserResultatsDUT(session: Session, rng: RNG, annee: string): void {
+  const candidats = Object.values(session.eleves).filter(
+    (e) => e.niveau === "DUT" && e.statut === "universite" && (e.anneePostBac ?? 1) > (DUREE_POST_BAC.DUT ?? 3)
+  );
+  if (candidats.length === 0) return;
+
+  const parFiliere = new Map<string, Eleve[]>();
+  candidats.forEach((e) => {
+    const f = e.filiereDUT ?? "Gestion commerciale";
+    if (!parFiliere.has(f)) parFiliere.set(f, []);
+    parFiliere.get(f)!.push(e);
+  });
+
+  parFiliere.forEach((groupe, filiere) => {
+    const classes = [...groupe].sort((a, b) => moyenneCumulee(b) - moyenneCumulee(a));
+    const technique = (FILIERES_DUT_TECHNIQUES as string[]).includes(filiere);
+
+    classes.forEach((eleve, idx) => {
+      if (technique && idx < 5) {
+        eleve.niveau = "EcoleIngenieurs";
+        eleve.anneePostBac = 1;
+        eleve.specialiteIngenieur = specialiteDepuisFiliereDUT(filiere, rng);
+        eleve.historiqueOrientation.push({
+          annee,
+          niveauOrigine: "DUT",
+          niveauDestination: "EcoleIngenieurs",
+          motif: `Meilleur(e) de la filière DUT ${filiere} (rang ${idx + 1}/5) — sélectionné(e) pour rejoindre les classes d'ingénieurs aux côtés des admis au GBINZIN, spécialité ${eleve.specialiteIngenieur}.`,
+          scoreDetail: {},
+        });
+        return;
+      }
+      eleve.statut = "diplome";
+      eleve.historiqueOrientation.push({
+        annee,
+        niveauOrigine: "DUT",
+        niveauDestination: "DUT",
+        motif: `Diplômé — DUT filière ${filiere} (3 ans).`,
+        scoreDetail: {},
+      });
+      demarrerCarriere(eleve, rng, annee);
+    });
+  });
+}
+
+/** Après la 2e année d'université (donc en tout début de 3e année), les 2
+ * meilleurs de chaque filière Sciences Économiques / Mathématiques-
+ * Informatique / Physique-Chimie ont une chance de rejoindre les classes
+ * d'ingénieurs — mais seulement s'ils respectent, en plus du classement,
+ * les critères de compétence attendus (jamais automatique). Sciences Éco
+ * rejoint le même vivier que la Prépa Commerce (Ingénieur commercial /
+ * Finance) ; Maths-Info et Physique-Chimie rejoignent le vivier technique
+ * classique. Idempotent (eleve.selectionIngenieurTraitee). */
+function verifierRepechageIngenieur(session: Session, rng: RNG, annee: string): void {
+  const FILIERES_REPECHAGE = ["Sciences Économiques", "Mathématiques-Informatique", "Physique-Chimie"];
+  const candidats = Object.values(session.eleves).filter(
+    (e) =>
+      e.niveau === "Universite" &&
+      e.statut === "universite" &&
+      (e.anneePostBac ?? 1) === 3 &&
+      !e.selectionIngenieurTraitee &&
+      FILIERES_REPECHAGE.includes(e.filiereUniversitaire ?? "")
+  );
+  if (candidats.length === 0) return;
+
+  const parFiliere = new Map<string, Eleve[]>();
+  candidats.forEach((e) => {
+    const f = e.filiereUniversitaire!;
+    if (!parFiliere.has(f)) parFiliere.set(f, []);
+    parFiliere.get(f)!.push(e);
+  });
+
+  parFiliere.forEach((groupe, filiere) => {
+    groupe.forEach((e) => (e.selectionIngenieurTraitee = true));
+    const top2 = [...groupe].sort((a, b) => moyenneCumulee(b) - moyenneCumulee(a)).slice(0, 2);
+
+    top2.forEach((eleve) => {
+      const c = eleve.competences;
+      let eligible = false;
+      let origineSpecialite = "";
+
+      if (filiere === "Sciences Économiques" && c.mathematiques >= 14) {
+        eligible = true;
+        origineSpecialite = "PrepaCommerce";
+      } else if (
+        (filiere === "Mathématiques-Informatique" || filiere === "Physique-Chimie") &&
+        c.mathematiques >= 14 &&
+        c.physique >= 13
+      ) {
+        eligible = true;
+        origineSpecialite = "Universite-tech";
+      }
+
+      if (!eligible) return;
+
+      eleve.niveau = "EcoleIngenieurs";
+      eleve.anneePostBac = 1;
+      eleve.specialiteIngenieur = choisirSpecialiteIngenieur(eleve, rng, origineSpecialite);
+      eleve.historiqueOrientation.push({
+        annee,
+        niveauOrigine: "Universite",
+        niveauDestination: "EcoleIngenieurs",
+        motif: `Parmi les 2 meilleurs de la filière ${filiere} après 2 ans d'université, et critères de compétence respectés — rejoint les classes d'ingénieurs, spécialité ${eleve.specialiteIngenieur}.`,
+        scoreDetail: {},
+      });
+    });
+  });
+}
+
 function capturerSnapshotAnnee(session: Session): void {
   const eleves = Object.values(session.eleves);
   const actifs = eleves.filter((e) => e.statut === "actif" || e.statut === "redoublant");

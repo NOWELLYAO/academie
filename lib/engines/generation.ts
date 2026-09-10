@@ -140,8 +140,15 @@ export function genererSession(
     const classeId = `3e-${index + 1}`;
     const matricules: string[] = [];
 
+    // Exactement 8 élèves internationaux par classe de départ (sur 60),
+    // le reste est ivoirien — positions tirées au hasard dans la classe.
+    const positionsEtrangers = new Set<number>();
+    while (positionsEtrangers.size < 8) {
+      positionsEtrangers.add(1 + Math.floor(rng() * ELEVES_PAR_CLASSE));
+    }
+
     for (let i = 1; i <= ELEVES_PAR_CLASSE; i++) {
-      const { nom, prenom, pays } = genererIdentiteUnique(rng, identitesUtilisees);
+      const { nom, prenom, pays } = genererIdentiteUnique(rng, identitesUtilisees, positionsEtrangers.has(i));
       const matricule = genererMatricule(lettre, i);
       const profil = tirerProfil(rng);
 

@@ -8,29 +8,39 @@ export const SPECIALITES_INGENIEUR = [
   "Génie électrique",
   "Informatique",
   "Biochimie",
-  "Généraliste",
+  "Génie Civil",
+  "Mines",
+  "Sciences de l'Eau",
+  "Ingénieur commercial",
+  "Finance",
 ] as const;
 
 export type SpecialiteIngenieur = (typeof SPECIALITES_INGENIEUR)[number];
 
-/** Attribue une spécialité d'école d'ingénieurs à l'issue du concours,
- * selon le profil de compétences de l'élève et son origine (Prépa Bio,
- * Prépa Génie Civil, ou Prépa scientifique classique). */
+const SPECIALITES_TECHNO: SpecialiteIngenieur[] = [
+  "Mécanique",
+  "Télécom",
+  "Énergétique",
+  "Génie électrique",
+  "Informatique",
+];
+
+/** Attribue une spécialité d'école d'ingénieurs à l'issue du concours
+ * GBINZIN (ou de la sélection des 5 meilleurs de chaque filière DUT),
+ * selon l'origine de l'élève. Ingénieur commercial et Finance sont
+ * exclusivement réservées aux élèves venus de Prépa Commerce — aucune
+ * autre origine n'y a accès. */
 export function choisirSpecialiteIngenieur(eleve: Eleve, rng: RNG, origine: string): SpecialiteIngenieur {
   const c = eleve.competences;
 
-  if (origine === "PrepaBio") {
-    return c.svt >= 15 ? "Biochimie" : "Généraliste";
-  }
-  if (origine === "PrepaGenieCivil") {
-    return "Mécanique";
-  }
+  if (origine === "PrepaBio") return "Biochimie";
+  if (origine === "PrepaGenieCivil") return pick(rng, ["Génie Civil", "Mines", "Sciences de l'Eau"]);
+  if (origine === "PrepaCommerce") return pick(rng, ["Ingénieur commercial", "Finance"]);
 
   const candidats: SpecialiteIngenieur[] = [];
   if (c.informatique >= 15) candidats.push("Informatique", "Télécom");
   if (c.physique >= 15 && c.mathematiques >= 15) candidats.push("Énergétique", "Génie électrique", "Mécanique");
-  if (c.svt >= 14) candidats.push("Biochimie");
-  if (candidats.length === 0) candidats.push("Généraliste");
+  if (candidats.length === 0) candidats.push(...SPECIALITES_TECHNO);
 
   return pick(rng, candidats);
 }

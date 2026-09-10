@@ -181,6 +181,9 @@ export interface Eleve {
   anneeMariage?: string;
   serieBac?: "A" | "C" | "D";
   specialiteIngenieur?: string;
+  filiereUniversitaire?: string;
+  filiereDUT?: string;
+  selectionIngenieurTraitee?: boolean;
   bourse?: PortefeuilleBourse;
   patrimoine?: ActifPatrimoine[];
 }

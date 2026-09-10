@@ -253,7 +253,7 @@ export const useAcademyStore = create<AcademyState>()(
 
         // Le lauréat d'un concours prestigieux (Concours X / Polytechnique)
         // obtient en plus le statut d'admission d'excellence et une bourse
-        // spéciale, comme une admission directe en école d'ingénieurs.
+        // spéciale, garantissant sa réussite au concours GBINZIN plus tard.
         if (prestige && classement[0]) {
           const laureat = clone.eleves[classement[0].matricule];
           if (laureat) {

@@ -62,7 +62,7 @@ export default function ElevePage({
                 <FavoriteStar matricule={eleve.matricule} size="text-2xl" />
               </span>
             }
-            description={`${eleve.statut === "retraite" ? "🌅 Retraité(e)" : eleve.statut === "diplome" ? "🎓 Diplômé" : eleve.anneePostBac ? `${NOM_NIVEAU[eleve.niveau]} (${eleve.anneePostBac}e année)` : NOM_NIVEAU[eleve.niveau]} · Origine ${eleve.pays}`}
+            description={`${eleve.statut === "retraite" ? "🌅 Retraité(e)" : eleve.statut === "diplome" ? "🎓 Diplômé" : eleve.anneePostBac ? `${NOM_NIVEAU[eleve.niveau]}${eleve.filiereDUT ? ` — ${eleve.filiereDUT}` : eleve.filiereUniversitaire ? ` — ${eleve.filiereUniversitaire}` : ""} (${eleve.anneePostBac}e année)` : NOM_NIVEAU[eleve.niveau]} · Origine ${eleve.pays}`}
           />
         </div>
         <div className="text-right">
