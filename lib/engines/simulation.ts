@@ -169,7 +169,13 @@ const GRADE_SECONDAIRE: Partial<Record<Niveau, string>> = {
 export function cleNiveauEleve(eleve: Eleve): string {
   if (!estPostBac(eleve.niveau)) return eleve.niveau;
   const filiere =
-    eleve.niveau === "DUT" ? eleve.filiereDUT ?? "" : eleve.niveau === "Universite" ? eleve.filiereUniversitaire ?? "" : "";
+    eleve.niveau === "DUT"
+      ? eleve.filiereDUT ?? ""
+      : eleve.niveau === "Universite"
+      ? eleve.filiereUniversitaire ?? ""
+      : eleve.niveau === "EcoleIngenieurs"
+      ? eleve.specialiteIngenieur ?? ""
+      : "";
   return `${eleve.niveau}::${filiere}::${eleve.anneePostBac ?? 1}`;
 }
 
