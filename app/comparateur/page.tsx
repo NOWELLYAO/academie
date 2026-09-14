@@ -18,7 +18,7 @@ import { MATIERES } from "@/lib/data/subjects";
 import { derniereMoyenneMatiere } from "@/lib/engines/ranking";
 import { Eleve, SubjectKey } from "@/lib/models/types";
 import Avatar from "@/components/Avatar";
-import { listerPromos, elevesDeLaPromo, parcoursResume } from "@/lib/engines/promotions";
+import { listerPromos, elevesDeLaPromo, parcoursResume, listerClassesHistoriques, elevesDeClasseHistorique } from "@/lib/engines/promotions";
 import { formaterFCFA } from "@/lib/engines/finances";
 import { LIBELLE_RESPONSABILITE } from "@/lib/data/metiers";
 
@@ -43,24 +43,23 @@ export default function ComparateurPage() {
   const [promoA, setPromoA] = useState("");
   const [promoB, setPromoB] = useState("");
 
-  const classeAInfo = session?.classes.find((c) => c.id === classeA);
-  const classeBInfo = session?.classes.find((c) => c.id === classeB);
+  const classesHistoriques = useMemo(() => (session ? listerClassesHistoriques(session) : []), [session]);
+  const elevesA = useMemo(() => (session && classeA ? elevesDeClasseHistorique(session, classeA) : []), [session, classeA]);
+  const elevesB = useMemo(() => (session && classeB ? elevesDeClasseHistorique(session, classeB) : []), [session, classeB]);
   const eleve = matriculeEleve ? session?.eleves[matriculeEleve] : undefined;
   const eleveA = matriculeEleveA ? session?.eleves[matriculeEleveA] : undefined;
   const eleveB = matriculeEleveB ? session?.eleves[matriculeEleveB] : undefined;
 
   const dataClasses = useMemo(() => {
-    if (!session || !classeAInfo || !classeBInfo) return [];
-    const elevesA = classeAInfo.matricules.map((m) => session.eleves[m]).filter(Boolean);
-    const elevesB = classeBInfo.matricules.map((m) => session.eleves[m]).filter(Boolean);
+    if (elevesA.length === 0 || elevesB.length === 0) return [];
 
     return MATIERES.map((m) => {
       const moyA = moyenneClassePourMatiere(elevesA, m.key);
       const moyB = moyenneClassePourMatiere(elevesB, m.key);
       if (moyA === null && moyB === null) return null;
-      return { matiere: m.nom, [classeAInfo.nom]: moyA ?? 0, [classeBInfo.nom]: moyB ?? 0 };
+      return { matiere: m.nom, [classeA]: moyA ?? 0, [classeB]: moyB ?? 0 };
     }).filter((x): x is NonNullable<typeof x> => x !== null);
-  }, [session, classeAInfo, classeBInfo]);
+  }, [elevesA, elevesB, classeA, classeB]);
 
   const dataEleve = useMemo(() => {
     if (!session || !eleve) return [];
@@ -175,9 +174,9 @@ export default function ComparateurPage() {
                 className="border border-line bg-white px-3 py-2 text-sm"
               >
                 <option value="">— Sélectionner —</option>
-                {session.classes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nom}
+                {classesHistoriques.map((c) => (
+                  <option key={c.nom} value={c.nom}>
+                    {c.nom} ({c.annee})
                   </option>
                 ))}
               </select>
@@ -190,9 +189,9 @@ export default function ComparateurPage() {
                 className="border border-line bg-white px-3 py-2 text-sm"
               >
                 <option value="">— Sélectionner —</option>
-                {session.classes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nom}
+                {classesHistoriques.map((c) => (
+                  <option key={c.nom} value={c.nom}>
+                    {c.nom} ({c.annee})
                   </option>
                 ))}
               </select>
@@ -210,8 +209,8 @@ export default function ComparateurPage() {
                   <YAxis domain={[0, 20]} tick={{ fontSize: 11, fill: "#55607A" }} width={28} />
                   <Tooltip />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey={classeAInfo?.nom ?? "Classe A"} fill="#101B33" radius={[2, 2, 0, 0]} />
-                  <Bar dataKey={classeBInfo?.nom ?? "Classe B"} fill="#C9A227" radius={[2, 2, 0, 0]} />
+                  <Bar dataKey={classeA || "Classe A"} fill="#101B33" radius={[2, 2, 0, 0]} />
+                  <Bar dataKey={classeB || "Classe B"} fill="#C9A227" radius={[2, 2, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

@@ -1,4 +1,5 @@
 import { Eleve, Session } from "../models/types";
+import { moyenneCumulee } from "./ranking";
 
 export interface EtapeParcours {
   poste: string;
@@ -50,4 +51,48 @@ export function elevesDeLaPromo(session: Session, annee: string): Eleve[] {
  * classes qui ont suivi. */
 export function classeOrigine(eleve: Eleve): string {
   return eleve.moyennes[0]?.classeNom ?? "—";
+}
+
+export interface ClasseHistorique {
+  nom: string;
+  niveau: string;
+  annee: string;
+  effectif: number;
+}
+
+/** Liste TOUTES les classes ayant existé à un moment ou un autre pendant
+ * toute la simulation (secondaire et post-bac confondus), en s'appuyant
+ * sur le nom de classe conservé dans chaque entrée de moyenne — puisque
+ * session.classes ne contient que les classes de l'année en cours. */
+export function listerClassesHistoriques(session: Session): ClasseHistorique[] {
+  const registre = new Map<string, ClasseHistorique & { matricules: Set<string> }>();
+
+  Object.values(session.eleves).forEach((eleve) => {
+    eleve.moyennes.forEach((m) => {
+      if (!m.classeNom) return;
+      if (!registre.has(m.classeNom)) {
+        registre.set(m.classeNom, {
+          nom: m.classeNom,
+          niveau: m.niveau,
+          annee: m.annee,
+          effectif: 0,
+          matricules: new Set(),
+        });
+      }
+      registre.get(m.classeNom)!.matricules.add(eleve.matricule);
+    });
+  });
+
+  return Array.from(registre.values())
+    .map(({ matricules, ...rest }) => ({ ...rest, effectif: matricules.size }))
+    .sort((a, b) => a.annee.localeCompare(b.annee) || a.nom.localeCompare(b.nom));
+}
+
+/** Tous les élèves ayant un jour fait partie d'une classe donnée (par son
+ * nom historique), qu'ils y soient encore ou non — triés par moyenne de
+ * parcours décroissante. */
+export function elevesDeClasseHistorique(session: Session, nomClasse: string): Eleve[] {
+  return Object.values(session.eleves)
+    .filter((e) => e.moyennes.some((m) => m.classeNom === nomClasse))
+    .sort((a, b) => moyenneCumulee(b) - moyenneCumulee(a));
 }

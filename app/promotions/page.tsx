@@ -6,7 +6,7 @@ import { useAcademyStore } from "@/lib/store/useAcademyStore";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import Avatar from "@/components/Avatar";
-import { listerPromos, elevesDeLaPromo, parcoursResume, classeOrigine } from "@/lib/engines/promotions";
+import { listerPromos, elevesDeLaPromo, parcoursResume, classeOrigine, listerClassesHistoriques, elevesDeClasseHistorique } from "@/lib/engines/promotions";
 import { NOM_NIVEAU } from "@/lib/data/subjects";
 import { formaterFCFA } from "@/lib/engines/finances";
 
@@ -18,15 +18,21 @@ function formaterFCFACourt(montant: number): string {
 
 export default function PromotionsPage() {
   const session = useAcademyStore((s) => s.session);
+  const [mode, setMode] = useState<"promo" | "classe">("promo");
   const [promoChoisie, setPromoChoisie] = useState<string>("");
+  const [classeChoisie, setClasseChoisie] = useState<string>("");
 
   const promos = useMemo(() => (session ? listerPromos(session) : []), [session]);
   const promoActive = promoChoisie || promos[0] || "";
 
-  const eleves = useMemo(
-    () => (session && promoActive ? elevesDeLaPromo(session, promoActive) : []),
-    [session, promoActive]
-  );
+  const classesHistoriques = useMemo(() => (session ? listerClassesHistoriques(session) : []), [session]);
+  const classeActive = classeChoisie || classesHistoriques[0]?.nom || "";
+
+  const eleves = useMemo(() => {
+    if (!session) return [];
+    if (mode === "promo") return promoActive ? elevesDeLaPromo(session, promoActive) : [];
+    return classeActive ? elevesDeClasseHistorique(session, classeActive) : [];
+  }, [session, mode, promoActive, classeActive]);
 
   if (!session) {
     return (
@@ -42,13 +48,13 @@ export default function PromotionsPage() {
     );
   }
 
-  if (promos.length === 0) {
+  if (promos.length === 0 && classesHistoriques.length === 0) {
     return (
       <div className="p-5 md:p-10 max-w-3xl">
         <PageHeader
           eyebrow="🎓 Anciens élèves"
           title="Promotions"
-          description="Aucun diplômé pour l'instant — avancez la timeline jusqu'à ce que des élèves terminent leur cursus post-bac."
+          description="Aucune classe formée pour l'instant — avancez la timeline."
         />
       </div>
     );
@@ -64,23 +70,58 @@ export default function PromotionsPage() {
       <PageHeader
         eyebrow="🎓 Anciens élèves"
         title="Promotions"
-        description="Sélectionnez une promotion (année de diplôme) pour voir l'évolution complète de chaque élève : classe, filière, postes occupés, salaires, situation personnelle."
+        description="Sélectionnez une promotion (année de diplôme) ou une classe précise (à n'importe quel moment de son parcours) pour voir l'évolution complète de chaque élève : filière, postes occupés, salaires, situation personnelle."
       />
 
-      <div className="flex items-center gap-3 mb-6 flex-wrap">
-        <label className="text-xs uppercase tracking-wide text-slate">Promotion</label>
-        <select
-          value={promoActive}
-          onChange={(e) => setPromoChoisie(e.target.value)}
-          className="border border-line bg-white px-3 py-2 text-sm"
+      <div className="flex border border-line bg-white/60 mb-4 w-fit">
+        <button
+          onClick={() => setMode("promo")}
+          className={`px-4 py-2 text-sm ${mode === "promo" ? "bg-ink text-paper" : "text-slate hover:bg-paper-dim"}`}
         >
-          {promos.map((p) => (
-            <option key={p} value={p}>
-              Promo {p}
-            </option>
-          ))}
-        </select>
-        <span className="text-xs text-slate">{eleves.length} diplômé(s) cette année-là</span>
+          Par promotion (année de diplôme)
+        </button>
+        <button
+          onClick={() => setMode("classe")}
+          className={`px-4 py-2 text-sm ${mode === "classe" ? "bg-ink text-paper" : "text-slate hover:bg-paper-dim"}`}
+        >
+          Par classe (à tout moment du parcours)
+        </button>
+      </div>
+
+      <div className="flex items-center gap-3 mb-6 flex-wrap">
+        {mode === "promo" ? (
+          <>
+            <label className="text-xs uppercase tracking-wide text-slate">Promotion</label>
+            <select
+              value={promoActive}
+              onChange={(e) => setPromoChoisie(e.target.value)}
+              className="border border-line bg-white px-3 py-2 text-sm"
+            >
+              {promos.map((p) => (
+                <option key={p} value={p}>
+                  Promo {p}
+                </option>
+              ))}
+            </select>
+            <span className="text-xs text-slate">{eleves.length} diplômé(s) cette année-là</span>
+          </>
+        ) : (
+          <>
+            <label className="text-xs uppercase tracking-wide text-slate">Classe</label>
+            <select
+              value={classeActive}
+              onChange={(e) => setClasseChoisie(e.target.value)}
+              className="border border-line bg-white px-3 py-2 text-sm max-w-xs"
+            >
+              {classesHistoriques.map((c) => (
+                <option key={c.nom} value={c.nom}>
+                  {c.nom} ({c.annee})
+                </option>
+              ))}
+            </select>
+            <span className="text-xs text-slate">{eleves.length} élève(s) sont passés par cette classe</span>
+          </>
+        )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">

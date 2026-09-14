@@ -70,11 +70,10 @@ export function orienterFinDe3e(eleve: Eleve, annee: string): OrientationEntry {
 }
 
 /** Décision de progression générique (passage / redoublement / recalage). */
-export function decisionProgression(eleve: Eleve, annee: string): "passage" | "avertissement" | "redoublement" | "recale" {
+export function decisionProgression(eleve: Eleve, annee: string): "passage" | "avertissement" | "recale" {
   const moyenne = moyenneEleve(eleve);
   if (moyenne >= 12) return "passage";
   if (moyenne >= 9.5) return "avertissement";
-  if (moyenne >= 6) return "redoublement";
   return "recale";
 }
 

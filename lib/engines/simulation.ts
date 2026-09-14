@@ -557,14 +557,7 @@ function traiterOrientationEleve(session: Session, eleve: Eleve, rng: RNG): void
     );
   }
 
-  let decision = decisionProgression(eleve, session.anneeCourante.libelle);
-
-  // Un seul redoublement autorisé sur tout le parcours scolaire : au-delà,
-  // c'est un recalage (règle simple et prévisible plutôt qu'un cycle
-  // indéfini de redoublements qui serait illisible).
-  if (decision === "redoublement" && eleve.redoublements >= 1) {
-    decision = "recale";
-  }
+  const decision = decisionProgression(eleve, session.anneeCourante.libelle);
 
   if (decision === "recale") {
     eleve.statut = "recale";
@@ -572,24 +565,7 @@ function traiterOrientationEleve(session: Session, eleve: Eleve, rng: RNG): void
       annee: session.anneeCourante.libelle,
       niveauOrigine: eleve.niveau,
       niveauDestination: "recale",
-      motif:
-        eleve.redoublements >= 1
-          ? "Nouvel échec après un redoublement — un seul redoublement est autorisé dans le parcours."
-          : "Résultats très insuffisants sur l'année.",
-      scoreDetail: {},
-    });
-    return;
-  }
-
-  if (decision === "redoublement") {
-    eleve.statut = "redoublant";
-    eleve.redoublements += 1;
-    eleve.anneesRedoublees.push(session.anneeCourante.libelle);
-    eleve.historiqueOrientation.push({
-      annee: session.anneeCourante.libelle,
-      niveauOrigine: eleve.niveau,
-      niveauDestination: "redoublement",
-      motif: `Redoublement de ${NOM_NIVEAU[eleve.niveau]} — résultats insuffisants pour passer (1 seul redoublement autorisé au total).`,
+      motif: "Résultats très insuffisants sur l'année.",
       scoreDetail: {},
     });
     return;
@@ -1149,6 +1125,16 @@ function recomposerClasses(session: Session): void {
   });
 
   session.classes = nouvellesClasses;
+
+  // Favoris : les 50 meilleurs de la toute première composition post-3e
+  // sont figés définitivement — jamais recalculés ni remplacés ensuite,
+  // quoi qu'il arrive à chacun par la suite.
+  if (session.favoris.length === 0) {
+    session.favoris = Object.values(session.eleves)
+      .sort((a, b) => moyenneCumulee(b) - moyenneCumulee(a))
+      .slice(0, 50)
+      .map((e) => e.matricule);
+  }
 }
 
 /** Passe à l'année scolaire suivante et réinitialise la timeline. */
