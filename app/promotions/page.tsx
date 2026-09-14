@@ -64,6 +64,10 @@ export default function PromotionsPage() {
     ? eleves.reduce((a, e) => a + (e.carriere?.salaireMensuel ?? 0), 0) / eleves.length
     : 0;
   const maries = eleves.filter((e) => e.marie).length;
+  const avecCarriere = eleves.filter((e) => e.carriere);
+  const meilleurSalaire = [...avecCarriere].sort(
+    (a, b) => (b.carriere?.salaireMensuel ?? 0) - (a.carriere?.salaireMensuel ?? 0)
+  )[0];
 
   return (
     <div className="p-5 md:p-10 max-w-7xl">
@@ -130,7 +134,7 @@ export default function PromotionsPage() {
         <StatCard label="Mariés" value={maries} accent="forest" />
         <StatCard
           label="Meilleur salaire"
-          value={eleves[0] ? formaterFCFA(eleves[0].carriere!.salaireMensuel) : "—"}
+          value={meilleurSalaire ? formaterFCFA(meilleurSalaire.carriere!.salaireMensuel) : "—"}
           accent="gold"
         />
       </div>
