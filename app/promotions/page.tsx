@@ -6,7 +6,7 @@ import { useAcademyStore } from "@/lib/store/useAcademyStore";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import Avatar from "@/components/Avatar";
-import { listerPromos, elevesDeLaPromo, parcoursResume, classeOrigine, listerClassesHistoriques, elevesDeClasseHistorique } from "@/lib/engines/promotions";
+import { listerPromos, elevesDeLaPromo, parcoursResume, classesSuivies, listerClassesHistoriques, elevesDeClasseHistorique } from "@/lib/engines/promotions";
 import { NOM_NIVEAU } from "@/lib/data/subjects";
 import { formaterFCFA } from "@/lib/engines/finances";
 
@@ -144,7 +144,7 @@ export default function PromotionsPage() {
           <thead>
             <tr>
               <th className="whitespace-nowrap">Élève</th>
-              <th className="whitespace-nowrap">Classe d&apos;origine</th>
+              <th className="min-w-[220px]">Classes suivies</th>
               <th className="whitespace-nowrap">Diplôme / Filière</th>
               <th>Parcours professionnel</th>
               <th className="whitespace-nowrap">Salaire actuel</th>
@@ -170,7 +170,16 @@ export default function PromotionsPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="text-slate whitespace-nowrap">{classeOrigine(e)}</td>
+                  <td className="text-slate">
+                    <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5 leading-tight">
+                      {classesSuivies(e).map((nom, i) => (
+                        <span key={i} className="inline-flex items-center whitespace-nowrap">
+                          {i > 0 && <span className="text-line mx-1">→</span>}
+                          {nom}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
                   <td className="whitespace-nowrap">
                     <div className="text-ink">{NOM_NIVEAU[e.niveau]}</div>
                     {filiere && <div className="text-slate">{filiere}</div>}

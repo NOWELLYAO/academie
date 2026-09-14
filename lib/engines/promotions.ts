@@ -53,6 +53,19 @@ export function classeOrigine(eleve: Eleve): string {
   return eleve.moyennes[0]?.classeNom ?? "—";
 }
 
+/** Toutes les classes suivies par un élève, dans l'ordre chronologique,
+ * du tout premier trimestre de 3e jusqu'à sa toute dernière classe
+ * connue (Seconde, Première, Terminale, puis post-bac) — sans doublon
+ * consécutif (un même nom de classe sur plusieurs trimestres ne compte
+ * qu'une fois). */
+export function classesSuivies(eleve: Eleve): string[] {
+  const noms: string[] = [];
+  eleve.moyennes.forEach((m) => {
+    if (m.classeNom && noms[noms.length - 1] !== m.classeNom) noms.push(m.classeNom);
+  });
+  return noms;
+}
+
 export interface ClasseHistorique {
   nom: string;
   niveau: string;
