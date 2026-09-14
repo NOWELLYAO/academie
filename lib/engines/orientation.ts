@@ -83,11 +83,18 @@ export function orienterApresSecondeC(eleve: Eleve, annee: string): OrientationE
   const scoreC = c.mathematiques * 0.4 + c.physique * 0.35 + c.informatique * 0.25;
   const scoreD = c.svt * 0.45 + c.physique * 0.25 + c.mathematiques * 0.3;
 
-  const destination: Niveau = scoreC >= scoreD ? "1ereC" : "1ereD";
+  // Accès à la 1ère C désormais soumis à de vrais seuils minimaux (Maths,
+  // Physique ET moyenne générale), en plus d'avoir un profil plus
+  // mathématiques/physique que sciences naturelles — jamais un simple
+  // arbitrage relatif.
+  const eligibleC = c.mathematiques >= 15 && c.physique >= 14 && moyenneEleve(eleve) >= 14;
+  const destination: Niveau = eligibleC && scoreC >= scoreD ? "1ereC" : "1ereD";
   const motif =
     destination === "1ereC"
-      ? "Profil fortement mathématiques/physique/informatique."
-      : "Profil scientifique davantage orienté sciences naturelles (SVT).";
+      ? "Fortes notes en Maths et Physique, profil mathématiques/physique/informatique dominant."
+      : eligibleC
+      ? "Profil scientifique davantage orienté sciences naturelles (SVT)."
+      : "Notes insuffisantes en Maths/Physique pour la 1ère C — profil davantage orienté sciences naturelles (SVT).";
 
   return {
     annee,

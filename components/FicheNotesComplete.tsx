@@ -72,12 +72,12 @@ export default function FicheNotesComplete({ eleve }: { eleve: Eleve }) {
           <tr>
             <th>Année</th>
             <th>Classe suivie</th>
+            <th>Commentaire</th>
             <th>Moyenne</th>
             <th>Examen</th>
             <th>Rang classe</th>
             <th>Rang génération</th>
             <th>Mention</th>
-            <th>Commentaire</th>
           </tr>
         </thead>
         <tbody>
@@ -93,6 +93,9 @@ export default function FicheNotesComplete({ eleve }: { eleve: Eleve }) {
                       🔁 doublant
                     </span>
                   )}
+                </td>
+                <td className="text-xs text-ink min-w-[260px]">
+                  {l.commentaires.length > 0 ? l.commentaires.join(" ") : "—"}
                 </td>
                 <td className={couleurMoyenne(l.moyenne)}>{l.moyenne.toFixed(2)}</td>
                 <td className="tabular-nums whitespace-nowrap">
@@ -114,9 +117,6 @@ export default function FicheNotesComplete({ eleve }: { eleve: Eleve }) {
                   ) : (
                     <span className="text-slate text-xs">—</span>
                   )}
-                </td>
-                <td className="text-xs text-slate max-w-xs">
-                  {l.commentaires.length > 0 ? l.commentaires.join(" ") : "—"}
                 </td>
               </tr>
             );

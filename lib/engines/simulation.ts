@@ -6,7 +6,7 @@ import { avancerMariages } from "./mariage";
 import { choisirSpecialiteIngenieur } from "../data/specialitesIngenieur";
 import { choisirFiliereDUT, specialiteDepuisFiliereDUT, FILIERES_DUT_TECHNIQUES } from "../data/filieresDUT";
 import { choisirFiliereUniversite } from "../data/filieresUniversite";
-import { mulberry32, RNG, clamp } from "../utils/random";
+import { mulberry32, RNG } from "../utils/random";
 import {
   calculerMoyenneTrimestre,
   creerEvaluation,
@@ -662,6 +662,8 @@ export function simulerOrientation(session: Session): void {
   // élèves de DUT de la génération ont été traités ci-dessus.
   finaliserResultatsDUT(session, rng, session.anneeCourante.libelle);
 
+  finaliserResultatsGBINZIN(session, rng, session.anneeCourante.libelle);
+
   // Repêchage des 2 meilleurs de Sciences Éco / Maths-Info / Physique-
   // Chimie après leur 2e année d'université, selon critères.
   verifierRepechageIngenieur(session, rng, session.anneeCourante.libelle);
@@ -719,6 +721,8 @@ export function organiserOrientationPourNiveau(session: Session, groupeCle: stri
   // attente jusqu'au bouton global.
   finaliserResultatsDUT(session, rng, session.anneeCourante.libelle);
 
+  finaliserResultatsGBINZIN(session, rng, session.anneeCourante.libelle);
+
   verifierRepechageIngenieur(session, rng, session.anneeCourante.libelle);
 
   return traites;
@@ -754,26 +758,30 @@ const DUREE_POST_BAC: Partial<Record<Niveau, number>> = {
   EcoleCommerce: 3,
 };
 
-const PREPAS_CONCOURS_INGENIEUR: Niveau[] = ["PrepaScientifique", "PrepaBio", "PrepaGenieCivil"];
+const PREPAS_GBINZIN: Niveau[] = ["PrepaScientifique", "PrepaBio", "PrepaGenieCivil", "PrepaCommerce"];
 
-/** Probabilité de réussite au concours GBINZIN, selon le niveau atteint
- * (moyenne de la dernière année) et le potentiel caché. Un lauréat du
- * Concours X / Polytechnique (admissiblePolytechnique) réussit toujours —
- * c'est la seule voie de passage garanti, mais elle passe quand même par
- * la prépa. */
-function chanceReussiteConcours(eleve: Eleve): number {
-  if (eleve.admissiblePolytechnique) return 1;
-  const moyenne = eleve.moyennes[eleve.moyennes.length - 1]?.moyenneGenerale ?? 10;
-  const potMax = Math.max(eleve.potentiel.potentielScientifique, eleve.potentiel.potentielLitteraire);
-  return clamp(0.22 + (moyenne - 10) * 0.045 + (potMax / 100) * 0.2, 0.08, 0.9);
-}
+/** Le concours GBINZIN est un vrai événement collectif à nombre de places
+ * strictement limité (pas un pourcentage, un chiffre fixe défini chaque
+ * année pour chaque filière), jamais un tirage indépendant par élève : il
+ * faut à la fois une moyenne minimale ET figurer parmi les meilleurs
+ * classés dans la limite des places disponibles. Un lauréat du Concours X
+ * / Polytechnique (admissiblePolytechnique) est admis d'office, hors
+ * quota et hors classement. */
+const NOTE_MIN_GBINZIN = 12;
+const PLACES_GBINZIN: Partial<Record<Niveau, number>> = {
+  PrepaScientifique: 15,
+  PrepaBio: 8,
+  PrepaGenieCivil: 8,
+  PrepaCommerce: 6,
+};
 
 /** Fait avancer d'une année un élève déjà engagé dans un cursus post-bac,
  * une fois sa décision de passage validée pour l'année (mêmes règles de
  * mention/redoublement que le secondaire) : passage à l'année suivante,
- * concours GBINZIN de fin de prépa (réussite ou repli), ou obtention du
- * diplôme final. Le DUT ne finalise jamais individuellement (voir
- * finaliserResultatsDUT, appelé une fois pour toute la promotion). */
+ * ou obtention du diplôme final. Les 4 prépas (concours GBINZIN) et le DUT
+ * ne finalisent jamais individuellement leur sortie de 2e/3e année — cette
+ * décision se prend collectivement, une fois tous les candidats connus
+ * (voir finaliserResultatsGBINZIN et finaliserResultatsDUT). */
 function avancerUneAnneePostBac(eleve: Eleve, annee: string, rng: RNG): void {
   // Un redoublement en cours de cursus post-bac laisse le statut à
   // "redoublant" le temps de l'année redoublée ; dès que l'élève
@@ -795,62 +803,10 @@ function avancerUneAnneePostBac(eleve: Eleve, annee: string, rng: RNG): void {
     return;
   }
 
-  // Fin de prépa (MPSI, Bio, Génie Civil) -> concours GBINZIN, avec une
-  // vraie chance d'échec.
-  if (PREPAS_CONCOURS_INGENIEUR.includes(eleve.niveau)) {
-    const origine = eleve.niveau;
-    const reussite = rng() < chanceReussiteConcours(eleve);
-    if (reussite) {
-      eleve.niveau = "EcoleIngenieurs";
-      eleve.anneePostBac = 1;
-      eleve.specialiteIngenieur = choisirSpecialiteIngenieur(eleve, rng, origine);
-      eleve.historiqueOrientation.push({
-        annee,
-        niveauOrigine: origine,
-        niveauDestination: "EcoleIngenieurs",
-        motif: `Admis(e) au concours GBINZIN à l'issue de ${NOM_NIVEAU[origine]} — intégration en école d'ingénieurs, spécialité ${eleve.specialiteIngenieur} (3 années restantes).`,
-        scoreDetail: {},
-      });
-    } else {
-      eleve.niveau = "Universite";
-      eleve.anneePostBac = 1;
-      eleve.filiereUniversitaire = choisirFiliereUniversite(eleve, rng).nom;
-      eleve.historiqueOrientation.push({
-        annee,
-        niveauOrigine: origine,
-        niveauDestination: "Universite",
-        motif: `Concours GBINZIN non validé à l'issue de ${NOM_NIVEAU[origine]} — poursuite en université.`,
-        scoreDetail: {},
-      });
-    }
-    return;
-  }
-
-  // Fin de Prépa Commerce -> concours GBINZIN d'entrée en école de commerce.
-  if (eleve.niveau === "PrepaCommerce") {
-    const reussite = rng() < chanceReussiteConcours(eleve);
-    if (reussite) {
-      eleve.niveau = "EcoleCommerce";
-      eleve.anneePostBac = 1;
-      eleve.historiqueOrientation.push({
-        annee,
-        niveauOrigine: "PrepaCommerce",
-        niveauDestination: "EcoleCommerce",
-        motif: "Admis(e) au concours GBINZIN à l'issue de la Prépa Commerce — intégration en école de commerce (3 années restantes).",
-        scoreDetail: {},
-      });
-    } else {
-      eleve.niveau = "Universite";
-      eleve.anneePostBac = 1;
-      eleve.filiereUniversitaire = choisirFiliereUniversite(eleve, rng).nom;
-      eleve.historiqueOrientation.push({
-        annee,
-        niveauOrigine: "PrepaCommerce",
-        niveauDestination: "Universite",
-        motif: "Concours GBINZIN non validé à l'issue de la Prépa Commerce — poursuite en université.",
-        scoreDetail: {},
-      });
-    }
+  if (PREPAS_GBINZIN.includes(eleve.niveau)) {
+    // Ne finalise jamais individuellement ici : le concours GBINZIN se
+    // joue collectivement une fois tous les candidats de la génération
+    // connus — voir finaliserResultatsGBINZIN.
     return;
   }
 
@@ -937,6 +893,84 @@ function finaliserResultatsDUT(session: Session, rng: RNG, annee: string): void 
         scoreDetail: {},
       });
       demarrerCarriere(eleve, rng, annee);
+    });
+  });
+}
+
+/** Le concours GBINZIN, en une fois pour toute la génération : au sein de
+ * chaque filière de prépa (MPSI, Bio, Génie Civil, Commerce), seuls les
+ * candidats à la fois au-dessus de la moyenne minimale ET classés parmi
+ * les 60% meilleurs de leur filière cette année-là sont admis — jamais un
+ * simple tirage indépendant par élève. Les lauréats du Concours X /
+ * Polytechnique (admissiblePolytechnique) sont admis d'office, hors
+ * classement. */
+function finaliserResultatsGBINZIN(session: Session, rng: RNG, annee: string): void {
+  const candidats = Object.values(session.eleves).filter(
+    (e) =>
+      PREPAS_GBINZIN.includes(e.niveau) &&
+      e.statut === "universite" &&
+      (e.anneePostBac ?? 1) > (DUREE_POST_BAC[e.niveau] ?? 2)
+  );
+  if (candidats.length === 0) return;
+
+  const parFiliere = new Map<Niveau, Eleve[]>();
+  candidats.forEach((e) => {
+    if (!parFiliere.has(e.niveau)) parFiliere.set(e.niveau, []);
+    parFiliere.get(e.niveau)!.push(e);
+  });
+
+  parFiliere.forEach((groupe, origine) => {
+    const classes = [...groupe].sort(
+      (a, b) => (b.moyennes[b.moyennes.length - 1]?.moyenneGenerale ?? 0) - (a.moyennes[a.moyennes.length - 1]?.moyenneGenerale ?? 0)
+    );
+    const eligibles = classes.filter((e) => (e.moyennes[e.moyennes.length - 1]?.moyenneGenerale ?? 0) >= NOTE_MIN_GBINZIN);
+    const placesDisponibles = PLACES_GBINZIN[origine] ?? 5;
+    const admis = new Set(eligibles.slice(0, placesDisponibles).map((e) => e.matricule));
+
+    classes.forEach((eleve) => {
+      const moyenne = eleve.moyennes[eleve.moyennes.length - 1]?.moyenneGenerale ?? 0;
+      const rangDansEligibles = eligibles.indexOf(eleve);
+      const estAdmis = eleve.admissiblePolytechnique || admis.has(eleve.matricule);
+
+      if (estAdmis) {
+        if (origine === "PrepaCommerce") {
+          eleve.niveau = "EcoleCommerce";
+          eleve.anneePostBac = 1;
+          eleve.historiqueOrientation.push({
+            annee,
+            niveauOrigine: origine,
+            niveauDestination: "EcoleCommerce",
+            motif: `Admis(e) au concours GBINZIN (${placesDisponibles} places disponibles cette année, rang ${rangDansEligibles + 1}/${eligibles.length}, moyenne ${moyenne.toFixed(2)}) à l'issue de la Prépa Commerce — intégration en école de commerce (3 années restantes).`,
+            scoreDetail: {},
+          });
+        } else {
+          eleve.niveau = "EcoleIngenieurs";
+          eleve.anneePostBac = 1;
+          eleve.specialiteIngenieur = choisirSpecialiteIngenieur(eleve, rng, origine);
+          eleve.historiqueOrientation.push({
+            annee,
+            niveauOrigine: origine,
+            niveauDestination: "EcoleIngenieurs",
+            motif: `Admis(e) au concours GBINZIN (${placesDisponibles} places d'ingénieur disponibles cette année, rang ${rangDansEligibles + 1}/${eligibles.length}, moyenne ${moyenne.toFixed(2)}) à l'issue de ${NOM_NIVEAU[origine]} — intégration en école d'ingénieurs, spécialité ${eleve.specialiteIngenieur} (3 années restantes).`,
+            scoreDetail: {},
+          });
+        }
+      } else {
+        eleve.niveau = "Universite";
+        eleve.anneePostBac = 1;
+        eleve.filiereUniversitaire = choisirFiliereUniversite(eleve, rng).nom;
+        const motifEchec =
+          moyenne < NOTE_MIN_GBINZIN
+            ? `Concours GBINZIN non validé (moyenne ${moyenne.toFixed(2)}, en dessous du minimum requis) à l'issue de ${NOM_NIVEAU[origine]} — poursuite en université.`
+            : `Concours GBINZIN non validé (seulement ${placesDisponibles} places disponibles pour ${eligibles.length} candidats éligibles, rang ${rangDansEligibles + 1}) à l'issue de ${NOM_NIVEAU[origine]} — poursuite en université.`;
+        eleve.historiqueOrientation.push({
+          annee,
+          niveauOrigine: origine,
+          niveauDestination: "Universite",
+          motif: motifEchec,
+          scoreDetail: {},
+        });
+      }
     });
   });
 }
