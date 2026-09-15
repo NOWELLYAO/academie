@@ -11,11 +11,12 @@ export default function AccueilPage() {
   const nouvelleSession = useAcademyStore((s) => s.nouvelleSession);
   const [nom, setNom] = useState("Génération 2026");
   const [enCours, setEnCours] = useState(false);
+  const [mode, setMode] = useState<"libre" | "histoire" | "ironman">("libre");
 
   function lancer() {
     setEnCours(true);
     setTimeout(() => {
-      nouvelleSession(nom || "Génération 2026");
+      nouvelleSession(nom || "Génération 2026", mode);
       router.push("/dashboard");
     }, 50);
   }
@@ -47,6 +48,18 @@ export default function AccueilPage() {
             className="w-full border border-line bg-white px-3 py-2 text-sm mb-4 focus:outline-none focus:border-ink"
             placeholder="Génération 2026"
           />
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {[
+              ["libre", "🎮 Libre", "Explorez sans contrainte"],
+              ["histoire", "📖 Histoire", "Objectifs scénarisés"],
+              ["ironman", "⚔️ Ironman", "Décisions irréversibles"],
+            ].map(([id, label, text]) => (
+              <button key={id} type="button" onClick={() => setMode(id as typeof mode)} className={`text-left border p-2.5 transition-colors ${mode === id ? "border-gold bg-gold-soft/30" : "border-line bg-white hover:border-ink"}`}>
+                <div className="text-xs font-medium">{label}</div>
+                <div className="text-[10px] text-slate mt-1">{text}</div>
+              </button>
+            ))}
+          </div>
           <button
             onClick={lancer}
             disabled={enCours}

@@ -53,3 +53,46 @@ une facilement plus tard (Postgres + Prisma, par exemple).
 - La saisie manuelle de notes ("Gérer les notes") est disponible via le
   menu **Notes**. La progression automatique de la timeline génère aussi
   des évaluations et des notes de façon réaliste sans saisie manuelle.
+
+## V2 — Direction stratégique
+
+La simulation intègre désormais une couche de jeu stratégique :
+
+- **Direction stratégique** : budget annuel, réputation et décisions à impact réel ;
+- **Psychologie cachée** : créativité, leadership, discipline, ambition, résilience, gestion du stress ;
+- **Relations** : premiers réseaux d'amitié et de mentorat entre élèves ;
+- **Monde évolutif** : économie, emploi, technologie, international et coût de la vie ;
+- **Missions** : objectifs de direction avec récompenses et progression ;
+- **Journal narratif** : décisions, actualités et moments marquants de la génération ;
+- **Page `/direction`** : nouveau centre de commandement de l'académie.
+
+La logique est isolée dans `lib/engines/directeur.ts` afin de préserver les moteurs scolaires existants.
+
+## V2 — Jeu des destinées
+La V2 ajoute une couche de gameplay au simulateur : modes Libre/Histoire/Ironman, psychologie latente, relations, événements narratifs à choix, protégés, missions, réputation, monde évolutif, décisions stratégiques, chronique et archives des destinées.
+
+## V4 — Simulation profonde
+
+La V4 ajoute une couche de simulation de destinée indépendante des moteurs scolaires historiques :
+- psychologie et archétypes latents ;
+- réputation, influence, satisfaction, réseau et risque ;
+- relations qui évoluent et peuvent devenir mentorat/rivalité ;
+- économie, technologie, emploi et secteurs porteurs ;
+- effets du monde sur les carrières et les salaires ;
+- secrets émergents et moments déterminants ;
+- chronique annuelle de la génération ;
+- projection de destinée individuelle dans les fiches élèves.
+
+Le moteur est dans `lib/engines/deepSimulation.ts` et s'exécute à la fin de chaque année scolaire, après orientation.
+
+## V6 — Monde vivant & héritage
+
+La V6 transforme la simulation en monde persistant à l'échelle d'une génération :
+- macro-économie et chronologie mondiale ;
+- entreprises créées par les élèves, croissance, emplois et valorisation ;
+- archive des alumni, influence et patrimoine ;
+- familles/dynasties lorsque les trajectoires matrimoniales se croisent ;
+- score de legacy de la génération ;
+- événements historiques et secrets émergents ;
+- nouvelle page **Monde vivant** ;
+- simulation profonde automatiquement exécutée au passage à une nouvelle année.

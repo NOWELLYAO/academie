@@ -9,6 +9,10 @@ import { useAcademyStore } from "@/lib/store/useAcademyStore";
 const LIENS = [
   { href: "/", label: "Accueil", groupe: "principal" },
   { href: "/dashboard", label: "Tableau de bord", groupe: "principal" },
+  { href: "/direction", label: "🎯 Direction stratégique", groupe: "principal" },
+  { href: "/strategie", label: "🧬 Jeu des destinées", groupe: "principal" },
+  { href: "/monde-vivant", label: "🌍 Monde vivant", groupe: "principal" },
+  { href: "/heritage", label: "🧬 Héritage & générations", groupe: "principal" },
   { href: "/favoris", label: "★ Mes favoris", groupe: "principal" },
   { href: "/classes", label: "Classes", groupe: "gestion" },
   { href: "/eleves", label: "Élèves", groupe: "gestion" },
@@ -25,6 +29,7 @@ const LIENS = [
   { href: "/examens", label: "📊 Examens", groupe: "analyse" },
   { href: "/statistiques", label: "Statistiques", groupe: "analyse" },
   { href: "/hall-of-fame", label: "Hall of Fame", groupe: "distinctions" },
+  { href: "/destinees", label: "📖 Destinées & archives", groupe: "distinctions" },
   { href: "/tableau-honneur", label: "Tableau d'honneur", groupe: "distinctions" },
   { href: "/concours", label: "Concours", groupe: "distinctions" },
   { href: "/carrieres", label: "💼 Carrières", groupe: "vieactive" },

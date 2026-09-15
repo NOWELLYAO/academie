@@ -21,12 +21,15 @@ import { construireResumeEtape } from "../engines/resume";
 import { scoreDuDomaine } from "../engines/domaines";
 import { crediterEleve, MONTANTS_CONCOURS, MONTANT_ADMISSION_EXCELLENCE } from "../engines/finances";
 import { v4 as uuid } from "uuid";
+import { appliquerDecision, assurerDirector, actualiserMissions, actualiserStory, faireAvancerMonde, genererEvenementNarratif, resoudreEvenement, protegerEleve, DecisionId, ChoiceId } from "../engines/directeur";
+import { simulerDestineesAnnee } from "../engines/deepSimulation";
+import { simulerLegacyAnnee, preparerGenerationSuivante } from "../engines/legacy";
 
 interface AcademyState {
   session: Session | null;
   sessionsHistorique: { id: string; nom: string; dateCreation: string }[];
   dernierResume: string | null;
-  nouvelleSession: (nom: string) => void;
+  nouvelleSession: (nom: string, mode?: "libre" | "histoire" | "ironman") => void;
   avancerEtape: () => void;
   reinitialiser: () => void;
   creerEvaluationManuelle: (
@@ -49,6 +52,12 @@ interface AcademyState {
   genererNotesPourNiveau: (groupeCle: string) => number;
   organiserExamenPourNiveau: (groupeCle: string) => number;
   organiserOrientationPourNiveau: (groupeCle: string) => number;
+  appliquerDecisionDirecteur: (id: DecisionId) => boolean;
+  preparerAnneeDirecteur: () => void;
+  resoudreEvenementDirecteur: (choice: ChoiceId) => boolean;
+  protegerEleveDirecteur: (matricule: string) => boolean;
+  simulerLegacy: () => void;
+  preparerGenerationSuivante: () => number;
 }
 
 /** Recalcule et met à jour l'entrée de moyenne trimestrielle d'un élève
@@ -111,9 +120,11 @@ export const useAcademyStore = create<AcademyState>()(
       sessionsHistorique: [],
       dernierResume: null,
 
-      nouvelleSession: (nom: string) => {
+      nouvelleSession: (nom: string, mode = "libre") => {
         const seed = newSeed();
         const session = genererSession(seed, nom);
+        session.modeJeu = mode;
+        assurerDirector(session);
         set((state) => ({
           session,
           dernierResume: null,
@@ -132,12 +143,25 @@ export const useAcademyStore = create<AcademyState>()(
         // Clone profond pour garantir la réactivité de zustand
         const clone: Session = JSON.parse(JSON.stringify(session));
         etapeSuivante(clone);
+        assurerDirector(clone);
+        if (clone.anneeCourante.etapeCourante === "T1" && clone.anneeCourante.libelle !== anneeAvant) {
+          faireAvancerMonde(clone);
+          simulerDestineesAnnee(clone);
+          simulerLegacyAnnee(clone);
+        }
+        actualiserMissions(clone);
+        actualiserStory(clone);
+        if (clone.anneeCourante.etapeCourante === "orientation" || clone.anneeCourante.etapeCourante === "T1") genererEvenementNarratif(clone);
         clone.bilan = calculerBilan(clone);
         const resume = construireResumeEtape(etapeAvant, anneeAvant, session, clone);
         set({ session: clone, dernierResume: resume });
       },
 
-      reinitialiser: () => set({ session: null }),
+      reinitialiser: () => {
+        const { session } = get();
+        if (session?.modeJeu === "ironman") return;
+        set({ session: null });
+      },
 
       creerEvaluationManuelle: (classeId, matiere, type, bareme, coefficientPropre) => {
         const { session } = get();
@@ -295,6 +319,65 @@ export const useAcademyStore = create<AcademyState>()(
         const traites = organiserOrientationPourNiveau(clone, groupeCle);
         set({ session: clone });
         return traites;
+      },
+
+      appliquerDecisionDirecteur: (id: DecisionId) => {
+        const { session } = get();
+        if (!session) return false;
+        const clone: Session = JSON.parse(JSON.stringify(session));
+        const result = appliquerDecision(clone, id);
+        actualiserMissions(clone);
+        actualiserStory(clone);
+        set({ session: clone });
+        return result.applied;
+      },
+
+      preparerAnneeDirecteur: () => {
+        const { session } = get();
+        if (!session) return;
+        const clone: Session = JSON.parse(JSON.stringify(session));
+        assurerDirector(clone);
+        clone.directeur!.anneeDerniereDecision = undefined;
+        faireAvancerMonde(clone);
+        actualiserMissions(clone);
+        actualiserStory(clone);
+        genererEvenementNarratif(clone);
+        set({ session: clone });
+      },
+
+      resoudreEvenementDirecteur: (choice: ChoiceId) => {
+        const { session } = get(); if (!session) return false;
+        const clone: Session = JSON.parse(JSON.stringify(session));
+        const ok = resoudreEvenement(clone, choice);
+        actualiserMissions(clone);
+        actualiserStory(clone);
+        set({ session: clone }); return ok;
+      },
+
+      protegerEleveDirecteur: (matricule: string) => {
+        const { session } = get(); if (!session) return false;
+        const clone: Session = JSON.parse(JSON.stringify(session));
+        const ok = protegerEleve(clone, matricule);
+        actualiserMissions(clone);
+        actualiserStory(clone);
+        set({ session: clone }); return ok;
+      },
+
+      simulerLegacy: () => {
+        const { session } = get();
+        if (!session) return;
+        const clone: Session = JSON.parse(JSON.stringify(session));
+        simulerLegacyAnnee(clone);
+        set({ session: clone });
+      },
+
+      preparerGenerationSuivante: () => {
+        const { session } = get();
+        if (!session) return 0;
+        const clone: Session = JSON.parse(JSON.stringify(session));
+        const count = preparerGenerationSuivante(clone);
+        set({ session: clone });
+        return count;
       },
     }),
     {

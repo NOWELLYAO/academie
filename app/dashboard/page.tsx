@@ -132,6 +132,17 @@ export default function DashboardPage() {
         <StatCard label="Taux de réussite" value={`${tauxReussite}%`} accent="forest" />
       </div>
 
+      {session.directeur && (
+        <div className="border border-gold bg-gold-soft/20 px-5 py-4 mb-8 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="text-[10px] uppercase tracking-[.15em] text-slate">🎯 Direction stratégique</div>
+            <div className="font-display text-lg mt-1">Budget {Math.round(session.directeur.budget).toLocaleString("fr-FR")} FCFA · Réputation {session.directeur.reputAcademie}/100</div>
+            <div className="text-xs text-slate mt-1">{session.directeur.world.headline}</div>
+          </div>
+          <Link href="/direction" className="bg-ink text-paper px-4 py-2 text-sm hover:bg-ink-soft">Prendre une décision →</Link>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
         <StatCard
           label="Meilleur élève"

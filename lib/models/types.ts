@@ -304,6 +304,8 @@ export interface Session {
   favoris: string[]; // matricules des élèves marqués comme favoris
   concours: ResultatConcours[];
   bilan?: BilanGeneration;
+  modeJeu?: "libre" | "histoire" | "ironman";
+  directeur?: import("../engines/directeur").DirectorState;
 }
 
 export interface BilanGeneration {

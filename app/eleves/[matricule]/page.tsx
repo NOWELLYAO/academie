@@ -19,6 +19,7 @@ import FavoriteStar from "@/components/FavoriteStar";
 import Avatar from "@/components/Avatar";
 import FicheNotesComplete from "@/components/FicheNotesComplete";
 import FicheDetailleeParNiveau from "@/components/FicheDetailleeParNiveau";
+import { getDeepState, scoreDestinee } from "@/lib/engines/deepSimulation";
 
 export default function ElevePage({
   params,
@@ -114,6 +115,16 @@ export default function ElevePage({
           </span>
         ))}
       </div>
+
+      {session.directeur?.deep?.destinies?.[eleve.matricule] && (() => {
+        const dest = getDeepState(session).destinies[eleve.matricule];
+        const archetypes: Record<string,string> = {leader:"Leader",expert:"Expert",entrepreneur:"Entrepreneur",chercheur:"Chercheur",humaniste:"Humaniste",explorateur:"Explorateur",artisan:"Bâtisseur"};
+        return <div className="border border-gold bg-gold-soft/20 p-5 mb-8">
+          <div className="flex flex-wrap justify-between gap-4 items-start"><div><div className="text-[10px] uppercase tracking-wide text-slate">🔮 Projection de destinée</div><h2 className="font-display text-xl mt-1">{archetypes[dest.archetype]} · {scoreDestinee(session, eleve).toFixed(0)} points</h2><p className="text-xs text-slate mt-1">Une trajectoire vivante, influencée par les résultats, les relations et le monde.</p></div><div className="text-right text-xs"><div>Réputation <b>{dest.reputation}</b></div><div>Influence <b>{dest.influence}</b></div></div></div>
+          <div className="grid grid-cols-3 gap-3 mt-5 text-xs"><div><div className="text-slate">Satisfaction</div><div className="font-medium mt-1">{dest.satisfaction}/100</div></div><div><div className="text-slate">Réseau</div><div className="font-medium mt-1">{dest.reseau}/100</div></div><div><div className="text-slate">Risque</div><div className="font-medium mt-1">{dest.risque}/100</div></div></div>
+          {dest.moments.length>0 && <div className="mt-5 border-t border-gold/40 pt-4"><div className="text-[10px] uppercase tracking-wide text-slate mb-2">Moments déterminants</div><div className="space-y-2">{dest.moments.slice(0,4).map((m,i)=><div key={i} className="text-xs"><span className="font-medium">{m.annee} · {m.titre}</span><span className="text-slate"> — {m.texte}</span></div>)}</div></div>}
+        </div>;
+      })()}
 
       <div className="border-l-2 border-gold bg-white/60 px-5 py-4 mb-10">
         <div className="text-[11px] uppercase tracking-wide text-slate mb-1.5">

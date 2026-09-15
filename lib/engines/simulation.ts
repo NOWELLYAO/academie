@@ -13,6 +13,7 @@ import {
   genererNotesAutomatiques,
 } from "./grading";
 import { tirerEvenement } from "./events";
+import { simulerDestineesAnnee } from "./deepSimulation";
 import { calculerIndicateurProgression } from "./progression";
 import { classerClasse, classerGeneration, moyenneCumulee } from "./ranking";
 import {
@@ -687,6 +688,9 @@ export function simulerOrientation(session: Session): void {
     }
   });
 
+  // Simulation profonde : destinées, relations, réputation, influence et monde.
+  simulerDestineesAnnee(session);
+
   // Quelques mariages entre anciens élèves de la génération, chaque année.
   const rngMariage = rngDeSession(session, `MARIAGE-${session.anneeCourante.libelle}`);
   avancerMariages(session, session.anneeCourante.libelle, rngMariage);
@@ -1128,7 +1132,15 @@ function recomposerClasses(session: Session): void {
     for (let i = 0; i < nbClasses; i++) {
       const tailleClasse = tailleBase + (i < reste ? 1 : 0);
       const suffixeAnnee = anneePostBacGroupe ? `-an${anneePostBacGroupe}` : "";
-      const suffixeFiliere = filiereGroupe ? `-${filiereGroupe.replace(/\s+/g, "")}` : "";
+      // L'identifiant de classe doit rester un slug sûr pour une URL —
+      // on retire tous les accents et caractères spéciaux (apostrophes,
+      // espaces...) du nom de filière, jamais seulement les espaces.
+      const suffixeFiliere = filiereGroupe
+        ? `-${filiereGroupe
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "") // accents
+            .replace(/[^a-zA-Z0-9]+/g, "")}` // tout le reste (espaces, apostrophes...)
+        : "";
       const id = `${niveau}${suffixeFiliere}${suffixeAnnee}-${i + 1}`;
       const membres = tries.slice(curseur, curseur + tailleClasse);
       curseur += tailleClasse;
