@@ -129,7 +129,7 @@ function descendantsFromMarriages(session: Session) {
     s.descendants[id] = {
       id, parent1: e.matricule, parent2: other.matricule,
       nomComplet: `Enfant de ${e.prenom} ${e.nom} & ${other.prenom} ${other.nom}`,
-      famille, generation: 2, anneeNaissance: year(session), potentiel: potential,
+      famille: family, generation: 2, anneeNaissance: year(session), potentiel: potential,
       curiosite: clamp100(40 + Math.round(rng() * 60)), discipline: clamp100(40 + Math.round(rng() * 60)),
       creativite: clamp100(40 + Math.round(rng() * 60)), ambition: clamp100(40 + Math.round(rng() * 60)),
       reseauFamilial: clamp100(Math.round((ensureInfluence(session, e) + ensureInfluence(session, other)) / 2)),
@@ -177,7 +177,7 @@ export function simulerLegacyAnnee(session: Session) {
   const retired = Object.values(session.eleves).filter(e => e.statut === "retraite");
   const alumniWealth = Object.values(deep.alumni).reduce((a, x) => a + x.patrimoineEstime, 0);
   s.heritageTotal = Math.round(alumniWealth + Object.values(s.descendants).reduce((a, x) => a + x.patrimoineHerite, 0));
-  s.transmissionScore = clamp100(Math.round((Object.values(s.partners).reduce((a, x) => a + x.prestige, 0) / Math.max(1, Object.keys(s.partners).length) + Math.min(100, s.descendants.length * 4)) / 2));
+  s.transmissionScore = clamp100(Math.round((Object.values(s.partners).reduce((a, x) => a + x.prestige, 0) / Math.max(1, Object.keys(s.partners).length) + Math.min(100, Object.keys(s.descendants).length * 4)) / 2));
 
   if (retired.length > 0 && !s.worldMilestones.some(x => x.annee === yearNow && x.titre === "Première vague de transmission")) {
     s.worldMilestones.unshift({ annee: yearNow, titre: "Première vague de transmission", texte: `${retired.length} anciens commencent à transmettre leurs réseaux, capitaux et savoir-faire à la génération suivante.`, impact: 8 });
