@@ -115,7 +115,7 @@ function careerEvolution(session:Session,e:Eleve,d:DestinyState,p:ProfilPsycholo
   if(p.ambition>82&&p.leadership>78&&world.emploi>90) d.influence=clamp100(d.influence+4);
 }
 function studentYear(session:Session,e:Eleve){
-  const dir=assurerDirector(session); const p=psycho(session,e); const d=ensureDestiny(session,e); d.relations ??= {}; relationEvolution(session,e,p);
+  const dir=assurerDirector(session); const p=psycho(session,e); const d=ensureDestiny(session,e); relationEvolution(session,e,p);
   const avg=e.moyennes.at(-1)?.moyenneGenerale??0;
   const prev=e.moyennes.length>1?e.moyennes.at(-2)?.moyenneGenerale??avg:avg;
   const delta=avg-prev;
@@ -128,7 +128,6 @@ function studentYear(session:Session,e:Eleve){
   updateEnterprise(session,e,d);
   updateLegacy(session,e,d);
   updateDynasty(session,e,d);
-  d.relations[e.matricule] ??= {amis:[],score:50,histoire:[]} as Relation;
   if(e.statut==="diplome"&&e.carriere){
     if(d.influence>65&&p.ambition>85) moment(session,e,"Réseau d'influence",`Ses relations commencent à accélérer sa carrière.`,3);
   }

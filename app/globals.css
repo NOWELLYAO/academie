@@ -1,100 +1,53 @@
 @import "tailwindcss";
 
 :root {
-  --ink: #101B33;
-  --ink-soft: #1B2C4F;
-  --paper: #FAFAF7;
-  --paper-dim: #F0EFE9;
-  --line: #DCD9CE;
-  --gold: #C9A227;
-  --gold-soft: #E8D9A6;
-  --forest: #1F5C4B;
-  --forest-soft: #E4EFE9;
-  --burgundy: #7A2E3B;
-  --burgundy-soft: #F2E4E6;
-  --slate: #55607A;
-  --danger: #A23B2E;
+  --ink: #0b1020;
+  --ink-2: #141d35;
+  --paper: #f5f7fb;
+  --paper-2: #ffffff;
+  --line: #dfe5ef;
+  --gold: #f4b740;
+  --gold-2: #ffd978;
+  --blue: #5b8cff;
+  --cyan: #49d6c8;
+  --violet: #9b7cff;
+  --pink: #f27aa9;
+  --green: #36c58b;
+  --red: #f06464;
+  --slate: #64748b;
 }
 
 @theme inline {
-  --color-ink: var(--ink);
-  --color-ink-soft: var(--ink-soft);
-  --color-paper: var(--paper);
-  --color-paper-dim: var(--paper-dim);
-  --color-line: var(--line);
-  --color-gold: var(--gold);
-  --color-gold-soft: var(--gold-soft);
-  --color-forest: var(--forest);
-  --color-forest-soft: var(--forest-soft);
-  --color-burgundy: var(--burgundy);
-  --color-burgundy-soft: var(--burgundy-soft);
-  --color-slate: var(--slate);
-  --color-danger: var(--danger);
-  --font-display: "Fraunces", Georgia, serif;
+  --color-ink: var(--ink); --color-ink-soft: var(--ink-2); --color-paper: var(--paper);
+  --color-paper-dim: #edf1f7; --color-line: var(--line); --color-gold: var(--gold);
+  --color-gold-soft: #fff2cf; --color-forest: #15806a; --color-forest-soft: #e2f7ef;
+  --color-burgundy: #a53c62; --color-burgundy-soft: #fbe7ef; --color-slate: var(--slate);
+  --color-danger: var(--red); --font-display: "Fraunces", Georgia, serif;
   --font-body: "IBM Plex Sans", system-ui, sans-serif;
 }
 
-html {
-  background: var(--paper);
-}
+html { background: var(--paper); }
+body { margin: 0; background: radial-gradient(circle at 85% -10%, #eaf0ff 0, transparent 34%), var(--paper); color: var(--ink); font-family: "IBM Plex Sans", system-ui, sans-serif; }
+h1,h2,h3,.font-display { font-family: "Fraunces", Georgia, serif; }
+::selection { background: #ffe3a0; }
+button,a,input { -webkit-tap-highlight-color: transparent; }
+button { cursor: pointer; }
 
-body {
-  background: var(--paper);
-  color: var(--ink);
-  font-family: "IBM Plex Sans", system-ui, sans-serif;
-}
-
-h1, h2, h3, .font-display {
-  font-family: "Fraunces", Georgia, serif;
-}
-
-::selection {
-  background: var(--gold-soft);
-}
-
-.ledger-table {
-  border-collapse: collapse;
-  width: 100%;
-}
-
-.ledger-table th {
-  text-align: left;
-  font-weight: 600;
-  font-size: 0.75rem;
-  color: var(--slate);
-  border-bottom: 1px solid var(--ink);
-  padding: 0.5rem 0.75rem;
-}
-
-.ledger-table td {
-  padding: 0.55rem 0.75rem;
-  border-bottom: 1px solid var(--line);
-  font-variant-numeric: tabular-nums;
-}
-
-.ledger-table tr:hover td {
-  background: var(--paper-dim);
-}
-
-.scrollbar-thin::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background: var(--line);
-  border-radius: 3px;
-}
-
-/* Zones sûres iPhone (encoche / Dynamic Island / barre d'accueil) */
-.safe-top {
-  padding-top: env(safe-area-inset-top);
-}
-.safe-bottom {
-  padding-bottom: env(safe-area-inset-bottom);
-}
-.safe-left {
-  padding-left: env(safe-area-inset-left);
-}
-.safe-right {
-  padding-right: env(safe-area-inset-right);
-}
+.game-card { border: 1px solid var(--line); background: rgba(255,255,255,.88); border-radius: 20px; box-shadow: 0 10px 30px rgba(17,31,61,.06); }
+.game-card-hover { transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+.game-card-hover:hover { transform: translateY(-2px); box-shadow: 0 18px 42px rgba(17,31,61,.10); border-color: #c8d3e4; }
+.glass-dark { background: linear-gradient(135deg, rgba(20,29,53,.98), rgba(11,16,32,.98)); box-shadow: 0 18px 45px rgba(8,13,28,.2); }
+.gradient-text { background: linear-gradient(90deg,#f4b740,#9b7cff,#49d6c8); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.progress-track { height: 8px; border-radius: 999px; background: #e9edf4; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg,#5b8cff,#9b7cff); }
+.pulse-dot { animation: pulseDot 1.8s ease-in-out infinite; }
+@keyframes pulseDot { 0%,100% { box-shadow: 0 0 0 0 rgba(244,183,64,.35); } 50% { box-shadow: 0 0 0 8px rgba(244,183,64,0); } }
+.fade-up { animation: fadeUp .45s ease both; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.ledger-table { border-collapse: collapse; width: 100%; }
+.ledger-table th { text-align:left; font-weight:600; font-size:.75rem; color:var(--slate); border-bottom:1px solid var(--ink); padding:.5rem .75rem; }
+.ledger-table td { padding:.55rem .75rem; border-bottom:1px solid var(--line); font-variant-numeric:tabular-nums; }
+.ledger-table tr:hover td { background:#f5f7fb; }
+.scrollbar-thin::-webkit-scrollbar { width:6px; height:6px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:3px; }
+.safe-top{padding-top:env(safe-area-inset-top)} .safe-bottom{padding-bottom:env(safe-area-inset-bottom)} .safe-left{padding-left:env(safe-area-inset-left)} .safe-right{padding-right:env(safe-area-inset-right)}

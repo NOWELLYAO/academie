@@ -24,6 +24,7 @@ import { v4 as uuid } from "uuid";
 import { appliquerDecision, assurerDirector, actualiserMissions, actualiserStory, faireAvancerMonde, genererEvenementNarratif, resoudreEvenement, protegerEleve, DecisionId, ChoiceId } from "../engines/directeur";
 import { simulerDestineesAnnee } from "../engines/deepSimulation";
 import { simulerLegacyAnnee, preparerGenerationSuivante } from "../engines/legacy";
+import { simulerCivilisationAnnee, simulerCivilisationNAnnees } from "../engines/civilisation";
 
 interface AcademyState {
   session: Session | null;
@@ -58,6 +59,8 @@ interface AcademyState {
   protegerEleveDirecteur: (matricule: string) => boolean;
   simulerLegacy: () => void;
   preparerGenerationSuivante: () => number;
+  simulerCivilisation: () => void;
+  simulerCivilisationNAnnees: (n: number) => number;
 }
 
 /** Recalcule et met à jour l'entrée de moyenne trimestrielle d'un élève
@@ -148,6 +151,7 @@ export const useAcademyStore = create<AcademyState>()(
           faireAvancerMonde(clone);
           simulerDestineesAnnee(clone);
           simulerLegacyAnnee(clone);
+          simulerCivilisationAnnee(clone);
         }
         actualiserMissions(clone);
         actualiserStory(clone);
@@ -376,6 +380,23 @@ export const useAcademyStore = create<AcademyState>()(
         if (!session) return 0;
         const clone: Session = JSON.parse(JSON.stringify(session));
         const count = preparerGenerationSuivante(clone);
+        set({ session: clone });
+        return count;
+      },
+
+      simulerCivilisation: () => {
+        const { session } = get();
+        if (!session) return;
+        const clone: Session = JSON.parse(JSON.stringify(session));
+        simulerCivilisationAnnee(clone);
+        set({ session: clone });
+      },
+
+      simulerCivilisationNAnnees: (n: number) => {
+        const { session } = get();
+        if (!session) return 0;
+        const clone: Session = JSON.parse(JSON.stringify(session));
+        const count = simulerCivilisationNAnnees(clone, n);
         set({ session: clone });
         return count;
       },

@@ -96,3 +96,14 @@ La V6 transforme la simulation en monde persistant à l'échelle d'une générat
 - événements historiques et secrets émergents ;
 - nouvelle page **Monde vivant** ;
 - simulation profonde automatiquement exécutée au passage à une nouvelle année.
+
+## V8 — Civilisation
+
+La V8 ajoute une couche de simulation longue durée :
+- ères historiques et indice de civilisation ;
+- familles et dynasties suivies sur plusieurs générations ;
+- entreprises avec transmission de direction ;
+- universités concurrentes, recherche, bourses et recrutements ;
+- événements historiques et crises ;
+- patrimoine et influence globaux ;
+- simulation prospective de 1 à 5 années depuis la page Civilisation.

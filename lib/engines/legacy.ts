@@ -177,7 +177,8 @@ export function simulerLegacyAnnee(session: Session) {
   const retired = Object.values(session.eleves).filter(e => e.statut === "retraite");
   const alumniWealth = Object.values(deep.alumni).reduce((a, x) => a + x.patrimoineEstime, 0);
   s.heritageTotal = Math.round(alumniWealth + Object.values(s.descendants).reduce((a, x) => a + x.patrimoineHerite, 0));
-  s.transmissionScore = clamp100(Math.round((Object.values(s.partners).reduce((a, x) => a + x.prestige, 0) / Math.max(1, Object.keys(s.partners).length) + Math.min(100, Object.keys(s.descendants).length * 4)) / 2));
+  const prestigeMoyen = Object.values(s.partners).reduce((a: number, x: PartnerState) => a + x.prestige, 0) / Math.max(1, Object.keys(s.partners).length);
+  s.transmissionScore = clamp100(Math.round((prestigeMoyen + Math.min(100, Object.keys(s.descendants).length * 4)) / 2));
 
   if (retired.length > 0 && !s.worldMilestones.some(x => x.annee === yearNow && x.titre === "Première vague de transmission")) {
     s.worldMilestones.unshift({ annee: yearNow, titre: "Première vague de transmission", texte: `${retired.length} anciens commencent à transmettre leurs réseaux, capitaux et savoir-faire à la génération suivante.`, impact: 8 });
