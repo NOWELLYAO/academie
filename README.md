@@ -107,3 +107,7 @@ La V8 ajoute une couche de simulation longue durée :
 - événements historiques et crises ;
 - patrimoine et influence globaux ;
 - simulation prospective de 1 à 5 années depuis la page Civilisation.
+
+## V10 — Le jeu des destinées
+
+Refonte gameplay : centre de jeu, actions à points d'action, objectifs par chapitres, score/combo, conséquences visibles, ciblage d'élèves, bourses de rupture, coaching, défis, projets et concours stratégiques. Le système reste compatible avec les moteurs V8/V9 et initialise automatiquement le nouvel état de jeu pour les anciennes sauvegardes.
