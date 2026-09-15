@@ -25,6 +25,8 @@ import { appliquerDecision, assurerDirector, actualiserMissions, actualiserStory
 import { simulerDestineesAnnee } from "../engines/deepSimulation";
 import { simulerLegacyAnnee, preparerGenerationSuivante } from "../engines/legacy";
 import { simulerCivilisationAnnee, simulerCivilisationNAnnees } from "../engines/civilisation";
+import { assurerJeu, executerAction, nouvelleEtapeJeu } from "../engines/gameplay";
+import { GameActionId } from "../models/types";
 
 interface AcademyState {
   session: Session | null;
@@ -61,6 +63,8 @@ interface AcademyState {
   preparerGenerationSuivante: () => number;
   simulerCivilisation: () => void;
   simulerCivilisationNAnnees: (n: number) => number;
+  executerActionJeu: (action: GameActionId, matricule?: string) => { ok: boolean; message: string };
+  initialiserJeu: () => void;
 }
 
 /** Recalcule et met à jour l'entrée de moyenne trimestrielle d'un élève
@@ -128,6 +132,7 @@ export const useAcademyStore = create<AcademyState>()(
         const session = genererSession(seed, nom);
         session.modeJeu = mode;
         assurerDirector(session);
+        assurerJeu(session);
         set((state) => ({
           session,
           dernierResume: null,
@@ -147,6 +152,7 @@ export const useAcademyStore = create<AcademyState>()(
         const clone: Session = JSON.parse(JSON.stringify(session));
         etapeSuivante(clone);
         assurerDirector(clone);
+        assurerJeu(clone);
         if (clone.anneeCourante.etapeCourante === "T1" && clone.anneeCourante.libelle !== anneeAvant) {
           faireAvancerMonde(clone);
           simulerDestineesAnnee(clone);
@@ -155,6 +161,7 @@ export const useAcademyStore = create<AcademyState>()(
         }
         actualiserMissions(clone);
         actualiserStory(clone);
+        if (clone.anneeCourante.etapeCourante !== etapeAvant) nouvelleEtapeJeu(clone);
         if (clone.anneeCourante.etapeCourante === "orientation" || clone.anneeCourante.etapeCourante === "T1") genererEvenementNarratif(clone);
         clone.bilan = calculerBilan(clone);
         const resume = construireResumeEtape(etapeAvant, anneeAvant, session, clone);
@@ -365,6 +372,24 @@ export const useAcademyStore = create<AcademyState>()(
         actualiserMissions(clone);
         actualiserStory(clone);
         set({ session: clone }); return ok;
+      },
+
+      initialiserJeu: () => {
+        const { session } = get();
+        if (!session) return;
+        const clone: Session = JSON.parse(JSON.stringify(session));
+        assurerJeu(clone);
+        set({ session: clone });
+      },
+
+      executerActionJeu: (action: GameActionId, matricule?: string) => {
+        const { session } = get();
+        if (!session) return { ok: false, message: "Aucune partie en cours." };
+        const clone: Session = JSON.parse(JSON.stringify(session));
+        const result = executerAction(clone, action, matricule);
+        if (result.ok) { actualiserMissions(clone); actualiserStory(clone); }
+        set({ session: clone });
+        return result;
       },
 
       simulerLegacy: () => {

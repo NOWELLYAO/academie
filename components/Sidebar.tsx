@@ -6,7 +6,7 @@ import clsx from "clsx";
 import { useAcademyStore } from "@/lib/store/useAcademyStore";
 
 const LIENS = [
- {href:"/dashboard",label:"🏠 Command Center",groupe:"jeu"},{href:"/strategie",label:"🎮 Missions & décisions",groupe:"jeu"},{href:"/direction",label:"🎯 Direction",groupe:"jeu"},{href:"/destinees",label:"🧬 Destinées",groupe:"jeu"},
+ {href:"/dashboard",label:"🏠 Command Center",groupe:"jeu"},{href:"/jeu",label:"🎮 Jouer",groupe:"jeu"},{href:"/strategie",label:"🎯 Missions & décisions",groupe:"jeu"},{href:"/direction",label:"🎯 Direction",groupe:"jeu"},{href:"/destinees",label:"🧬 Destinées",groupe:"jeu"},
  {href:"/eleves",label:"👥 Élèves",groupe:"academie"},{href:"/classes",label:"🏫 Classes",groupe:"academie"},{href:"/notes",label:"📝 Notes",groupe:"academie"},{href:"/examens",label:"🏆 Examens",groupe:"academie"},{href:"/orientation",label:"🧭 Orientation",groupe:"academie"},
  {href:"/evolution",label:"📈 Évolution",groupe:"analyse"},{href:"/comparateur",label:"⚖️ Comparateur",groupe:"analyse"},{href:"/classements",label:"🥇 Classements",groupe:"analyse"},{href:"/statistiques",label:"📊 Statistiques",groupe:"analyse"},{href:"/eleves-a-suivre",label:"🔎 À suivre",groupe:"analyse"},
  {href:"/hall-of-fame",label:"🏛️ Hall of Fame",groupe:"monde"},{href:"/monde-vivant",label:"🌍 Monde vivant",groupe:"monde"},{href:"/heritage",label:"🧬 Héritage",groupe:"monde"},{href:"/civilisation",label:"🌐 Civilisation",groupe:"monde"},{href:"/carrieres",label:"💼 Carrières",groupe:"monde"},{href:"/finances",label:"💰 Finances",groupe:"monde"},

@@ -289,6 +289,48 @@ export interface ResultatConcours {
   podium: { matricule: string; nom: string; prenom: string; score: number; rang: number }[];
 }
 
+
+export type GameActionId = "observer" | "coacher" | "defi" | "bourse" | "projet" | "concours";
+
+export interface GameActionLog {
+  id: string;
+  annee: string;
+  etape: AnneeScolaireInfo["etapeCourante"];
+  action: GameActionId;
+  titre: string;
+  cible?: string;
+  effet: string;
+  score: number;
+}
+
+export interface GameObjective {
+  id: string;
+  chapitre: number;
+  titre: string;
+  description: string;
+  cible: number;
+  progression: number;
+  reward: number;
+  complete: boolean;
+  hidden?: boolean;
+}
+
+export interface GameState {
+  actionPoints: number;
+  maxActionPoints: number;
+  actionsUsed: number;
+  combo: number;
+  score: number;
+  chapter: number;
+  chapterTitle: string;
+  objectives: GameObjective[];
+  completedObjectives: string[];
+  actionLog: GameActionLog[];
+  unlocked: string[];
+  streak: number;
+  victory?: boolean;
+}
+
 export interface Session {
   id: string;
   seed: number;
@@ -306,6 +348,7 @@ export interface Session {
   bilan?: BilanGeneration;
   modeJeu?: "libre" | "histoire" | "ironman";
   directeur?: import("../engines/directeur").DirectorState;
+  jeu?: GameState;
 }
 
 export interface BilanGeneration {
