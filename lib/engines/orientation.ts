@@ -1,4 +1,5 @@
 import { Eleve, Niveau, OrientationEntry } from "../models/types";
+import { derniereMoyenneMatiere } from "./ranking";
 import { RNG } from "../utils/random";
 import {
   FILIERES_COMMERCE,
@@ -79,22 +80,28 @@ export function decisionProgression(eleve: Eleve, annee: string): "passage" | "a
 
 /** Orientation après la Seconde C : 1ère C (fortement scientifique) ou 1ère D (SVT). */
 export function orienterApresSecondeC(eleve: Eleve, annee: string): OrientationEntry {
-  const c = eleve.competences;
-  const scoreC = c.mathematiques * 0.4 + c.physique * 0.35 + c.informatique * 0.25;
-  const scoreD = c.svt * 0.45 + c.physique * 0.25 + c.mathematiques * 0.3;
+  // Basé sur les notes réelles de l'année (celles affichées dans la fiche
+  // de l'élève), pas sur la compétence cachée — pour que le critère
+  // affiché ("Maths ≥ 15, Physique ≥ 14, Moyenne ≥ 14") corresponde
+  // exactement à ce que l'utilisateur voit et vérifie lui-même.
+  const noteMaths = derniereMoyenneMatiere(eleve, "mathematiques") ?? 0;
+  const notePhysique = derniereMoyenneMatiere(eleve, "physique") ?? 0;
+  const noteSVT = derniereMoyenneMatiere(eleve, "svt") ?? 0;
+  const noteInfo = derniereMoyenneMatiere(eleve, "informatique") ?? 0;
+  const moyenneAnnuelle = eleve.moyennes[eleve.moyennes.length - 1]?.moyenneGenerale ?? 0;
 
-  // Accès à la 1ère C désormais soumis à de vrais seuils minimaux (Maths,
-  // Physique ET moyenne générale), en plus d'avoir un profil plus
-  // mathématiques/physique que sciences naturelles — jamais un simple
-  // arbitrage relatif.
-  const eligibleC = c.mathematiques >= 15 && c.physique >= 14 && moyenneEleve(eleve) >= 14;
-  const destination: Niveau = eligibleC && scoreC >= scoreD ? "1ereC" : "1ereD";
-  const motif =
-    destination === "1ereC"
-      ? "Fortes notes en Maths et Physique, profil mathématiques/physique/informatique dominant."
-      : eligibleC
-      ? "Profil scientifique davantage orienté sciences naturelles (SVT)."
-      : "Notes insuffisantes en Maths/Physique pour la 1ère C — profil davantage orienté sciences naturelles (SVT).";
+  const scoreC = noteMaths * 0.4 + notePhysique * 0.35 + noteInfo * 0.25;
+  const scoreD = noteSVT * 0.45 + notePhysique * 0.25 + noteMaths * 0.3;
+
+  // Accès à la 1ère C soumis à de vrais seuils minimaux sur les notes
+  // réelles (Maths, Physique ET moyenne générale) — dès que ce seuil est
+  // atteint, la 1ère C est acquise, sans que la comparaison de profil
+  // (scoreC vs scoreD) puisse la faire basculer en D.
+  const eligibleC = noteMaths >= 15 && notePhysique >= 14 && moyenneAnnuelle >= 14;
+  const destination: Niveau = eligibleC ? "1ereC" : "1ereD";
+  const motif = eligibleC
+    ? `Seuils atteints (Maths ${noteMaths.toFixed(1)}, Physique ${notePhysique.toFixed(1)}, moyenne ${moyenneAnnuelle.toFixed(1)}) — 1ère C.`
+    : `Notes insuffisantes pour la 1ère C (Maths ${noteMaths.toFixed(1)}, Physique ${notePhysique.toFixed(1)}, moyenne ${moyenneAnnuelle.toFixed(1)} — seuils requis : 15/14/14) — orientation vers la 1ère D.`;
 
   return {
     annee,
